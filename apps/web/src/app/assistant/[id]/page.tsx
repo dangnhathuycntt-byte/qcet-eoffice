@@ -6,7 +6,7 @@ import { AssistantWorkspace } from "@/components/assistant/assistant-workspace";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Trợ lý | QCET E-Office",
+  title: "Trợ lý",
   description: "Cuộc trò chuyện đã lưu với Trợ lý",
 };
 

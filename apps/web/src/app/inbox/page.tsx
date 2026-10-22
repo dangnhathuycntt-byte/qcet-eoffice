@@ -8,7 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Hộp thư | QCET E-Office",
+  title: "Hộp thư",
   description: "Hộp thư thông báo điều hành và nhắc việc giao dịch",
 };
 

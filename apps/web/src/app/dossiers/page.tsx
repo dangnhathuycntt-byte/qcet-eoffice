@@ -7,7 +7,7 @@ import { DossierRegistryView } from "@/components/dossiers/dossier-registry-view
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Hồ sơ công việc - QCET E-Office",
+  title: "Hồ sơ công việc",
   description:
     "Quản lý hồ sơ công việc, lưu trữ cơ quan theo Nghị định 30/2020/NĐ-CP - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
 };

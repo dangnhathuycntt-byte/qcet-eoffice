@@ -8,7 +8,7 @@ import { DocumentRegistrySkeleton } from "@/components/documents/registry/docume
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Văn bản & Quản lý Công văn - QCET E-Office",
+  title: "Văn bản & Quản lý Công văn",
   description:
     "Sổ quản lý văn bản, công văn đi - đến, tờ trình duyệt và liên thông nhiệm vụ Nghị định 30/2020/NĐ-CP - Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn",
 };

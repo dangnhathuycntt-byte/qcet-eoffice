@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { MaintenanceView } from "@/components/common/maintenance-view";
 
 export const metadata: Metadata = {
-  title: "Bảo trì & Nâng cấp Hệ thống - QCET E-Office",
+  title: "Bảo trì & Nâng cấp Hệ thống",
   description:
     "Thông báo bảo trì và lộ trình nâng cấp tính năng hệ thống chuyển đổi số Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn (Version 2.4.3)",
 };

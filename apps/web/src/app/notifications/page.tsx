@@ -6,7 +6,7 @@ import { NotificationCenter } from "@/components/notifications/notification-cent
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: "Trung tâm thông báo - QCET E-Office" };
+  return { title: "Trung tâm thông báo" };
 }
 
 export default async function NotificationsPage() {

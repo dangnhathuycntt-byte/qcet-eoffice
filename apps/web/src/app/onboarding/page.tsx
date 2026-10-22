@@ -3,7 +3,7 @@ import { getRuntimeConfig } from "@/lib/server-api";
 import { OnboardingFlow } from "@/components/onboarding/onboarding-flow";
 
 export const metadata: Metadata = {
-  title: "Bắt đầu sử dụng · QCET E-Office",
+  title: "Bắt đầu sử dụng",
   description: "Xác nhận hồ sơ và thiết lập cách Trợ lý làm việc cùng bạn",
 };
 

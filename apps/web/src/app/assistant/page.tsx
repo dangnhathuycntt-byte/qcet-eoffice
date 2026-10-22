@@ -7,7 +7,7 @@ import { parseAssistantContextParam, parseAssistantPromptParam } from "@/compone
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Trợ lý | QCET E-Office",
+  title: "Trợ lý",
   description: "Hỏi đáp chỉ đọc về nhiệm vụ, văn bản và lịch họp trong quyền của Thầy/Cô",
 };
 
