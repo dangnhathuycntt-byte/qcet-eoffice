@@ -79,6 +79,26 @@ describe("Auth API Route Handlers Contracts", () => {
     assert.strictEqual(cookie?.maxAge, 0);
   });
 
+  // Trình duyệt gọi /api/auth/logout ở tên miền web; web rewrite sang api (ADR-011) nên req.url là địa chỉ nội bộ của api,
+  // Origin vẫn là của web, tên miền gốc nằm ở x-forwarded-host. So Origin với req.url thì đăng xuất luôn 403 (22/10/2026).
+  test("POST /api/auth/logout qua rewrite của web: Origin của web được nhận, Origin lạ vẫn bị từ chối", async () => {
+    const viaWeb = (origin: string) =>
+      logoutPost(
+        new NextRequest("http://127.0.0.1:3100/api/auth/logout", {
+          method: "POST",
+          headers: { origin, host: "127.0.0.1:3100", "x-forwarded-host": "localhost:3001", "sec-fetch-site": "same-origin" },
+        })
+      );
+
+    const res = await viaWeb("http://localhost:3001");
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.cookies.get(SESSION_COOKIE_NAME)?.maxAge, 0);
+
+    const foreign = await viaWeb("https://attacker.invalid");
+    assert.strictEqual(foreign.status, 403);
+    assert.strictEqual(foreign.cookies.get(SESSION_COOKIE_NAME), undefined);
+  });
+
   test("POST /api/auth/login is disabled before processing credentials", async () => {
     const req = new Request("http://localhost:3000/api/auth/login", {
       method: "POST",

@@ -14,7 +14,7 @@ import { MobileMenuOpenContext } from "@/components/layout/mobile-menu-button";
 import { OfflineBanner } from "@/components/layout/offline-banner";
 import { AgentModelsProvider } from "@/components/agent-chat/agent-models";
 import type { AgentModelCatalog } from "@qcet/shared/domain/agent/agent-models";
-import { useAuth } from "@/lib/auth-context";
+import { isLogoutInProgress, useAuth } from "@/lib/auth-context";
 import { sanitizeRedirectUrl } from "@qcet/shared/lib/login-helpers";
 import { shouldRedirectToOnboarding } from "@/lib/onboarding";
 import { isAssistantPath, isCardPagePath, isMeetingDetailPath, isNotesPath, isTaskDetailPath, isTaskSubPagePath } from "@/lib/navigation/active-matcher";
@@ -133,6 +133,8 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
     if (window.location.pathname.startsWith("/login") || window.location.pathname.startsWith("/portal")) {
       return;
     }
+    // Đang đăng xuất thì `logout()` tự chuyển trang sau khi máy chủ xóa phiên
+    if (isLogoutInProgress()) return;
     if (!isLoading && !isAuthenticated && !user && !isPublicRoute && !isRedirectingRef.current) {
       isRedirectingRef.current = true;
       const fullPath = `${window.location.pathname}${window.location.search}`;

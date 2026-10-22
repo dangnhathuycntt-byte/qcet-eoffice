@@ -157,6 +157,14 @@ export const AuthContext = createContext<AuthContextType>({
   isLoading: true,
 });
 
+// Đang đăng xuất: `logout()` tự chuyển sang /login sau khi máy chủ xóa phiên. AppShell thấy trạng thái chưa đăng nhập không được tự
+// chuyển trước: tải lại trang hủy giữa chừng việc xóa dữ liệu ngoại tuyến và `signOut`, và /login có thể tải khi cookie cũ còn
+// rồi đẩy người dùng về lại trang trong (22/10/2026).
+let logoutInProgress = false;
+export function isLogoutInProgress(): boolean {
+  return logoutInProgress;
+}
+
 export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (!context) {
@@ -423,11 +431,9 @@ export function AuthProvider({
     []
   );
 
-  const isLoggingOutRef = React.useRef(false);
-
   const logout = useCallback(async (): Promise<void> => {
-    if (isLoggingOutRef.current) return;
-    isLoggingOutRef.current = true;
+    if (logoutInProgress) return;
+    logoutInProgress = true;
 
     let userIdToPurge = user?.id;
     if (!userIdToPurge && typeof window !== "undefined") {
@@ -503,6 +509,9 @@ export function AuthProvider({
       window.clearTimeout(logoutTimeout);
     }
 
+    // Bước 4–5 là dọn dẹp sau khi đã gọi xóa phiên ở máy chủ: treo (IndexedDB bị chặn, Auth.js không phản hồi) thì vẫn sang /login.
+    window.setTimeout(() => window.location.replace("/login"), 3000);
+
     // 4. Purge user offline data
     if (userIdToPurge) {
       try {
@@ -520,7 +529,7 @@ export function AuthProvider({
         window.location.replace("/login");
       }
     } finally {
-      isLoggingOutRef.current = false;
+      logoutInProgress = false;
     }
   }, [user?.id]);
 
