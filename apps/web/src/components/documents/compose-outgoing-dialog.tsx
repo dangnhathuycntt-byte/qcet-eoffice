@@ -147,7 +147,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
     const text = summary.replace(/\s*\n+\s*/g, " ").trim();
     const errors: FieldErrors = {};
     if (text.length < 3) errors.summary = "Nhập trích yếu, ít nhất 3 ký tự.";
-    if (files.length === 0) errors.files = "Đính kèm tệp dự thảo văn bản.";
+    if (files.length === 0) errors.files = "Đính kèm tệp dự thảo (PDF hoặc Word, tối đa 10MB).";
     if (errors.summary || errors.files) {
       setFieldErrors(errors);
       if (errors.summary) summaryRef.current?.focus();
@@ -280,7 +280,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
                   e.preventDefault();
                   e.currentTarget.form?.requestSubmit();
                 }}
-                placeholder="Trích yếu: V/v …"
+                placeholder="Trích yếu"
                 className="min-h-0 py-0 text-2xl font-semibold leading-normal placeholder:text-muted-foreground/60 aria-invalid:text-foreground aria-invalid:placeholder:text-destructive/60 max-md:text-xl sm:min-h-0"
               />
               {fieldErrors.summary ? <FieldError id="compose-outgoing-summary-error">{fieldErrors.summary}</FieldError> : null}
@@ -363,9 +363,9 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
                 maxLength={2000}
                 countOnlyNearLimit
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Ghi chú gửi kèm cho người xử lý tiếp theo (không bắt buộc)"
+                placeholder="Ghi chú (không bắt buộc)"
                 disabled={savedWithoutFiles}
-                className="min-h-24 text-sm leading-relaxed sm:min-h-24"
+                className="min-h-16 text-sm leading-relaxed sm:min-h-16"
               />
 
               {/* Tệp dự thảo: bắt buộc, nhiều tệp, tải lên sau khi bản nháp được tạo. Khối như "Việc con" của hộp Tạo nhiệm vụ:
@@ -388,11 +388,9 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
                 />
                 <div className="flex h-10 items-center gap-2 pr-1.5 pl-3">
                   <h3 className="shrink-0 text-compact text-foreground">Tệp dự thảo</h3>
-                  {files.length > 0 ? (
-                    <span className="text-xs tabular-nums text-muted-foreground">{files.length}</span>
-                  ) : (
-                    <span className="min-w-0 truncate text-xs text-muted-foreground">PDF hoặc Word, tối đa 10MB mỗi tệp</span>
-                  )}
+                  {/* Không ghi ràng buộc thường trực (đọc mãi thành chữ thừa): bộ lọc của hộp chọn tệp, khung kéo thả, tooltip
+                      nút + và lỗi cụ thể đã nói PDF/Word, 10MB đúng lúc cần */}
+                  {files.length > 0 ? <span className="text-xs tabular-nums text-muted-foreground">{files.length}</span> : null}
                   {canEditFiles ? (
                     <Button
                       ref={attachRef}
@@ -400,7 +398,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
                       size="icon-xs"
                       onClick={() => fileInputRef.current?.click()}
                       aria-label="Đính kèm tệp dự thảo"
-                      title="Đính kèm tệp dự thảo (PDF hoặc Word, tối đa 10MB, kéo thả vào hộp cũng được)"
+                      title="Đính kèm tệp (PDF hoặc Word, tối đa 10MB)"
                       // Đỏ chỉ khi còn thiếu tệp; có tệp rồi mà vài tệp bị từ chối thì chỉ báo ở dòng cuối khối
                       aria-invalid={(Boolean(fieldErrors.files) && files.length === 0) || undefined}
                       aria-describedby={fieldErrors.files ? "compose-outgoing-files-error" : undefined}
@@ -442,8 +440,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
             </div>
           </div>
 
-          <DialogFooter className="shrink-0 items-center border-t border-border/60 px-5 py-3 md:pl-6 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
-            <p className="mr-auto min-w-0 text-xs text-muted-foreground max-sm:hidden">Số và ngày ban hành do văn thư cấp khi phát hành.</p>
+          <DialogFooter className="shrink-0 items-center border-t border-border/60 px-5 py-3 max-md:pb-[calc(env(safe-area-inset-bottom,0px)+12px)]">
             {savedWithoutFiles ? null : (
               <Button variant="ghost" size="sm" onClick={() => handleOpenChange(false)}>
                 Hủy
