@@ -114,8 +114,7 @@ export function PersonPillPicker({
             className={cn("w-64 max-w-[var(--available-width)]", MENU_POPUP_CLASS, SHEET_POPUP_CLASS, "max-md:has-[[data-popup-open]]:visible")}
           >
             <MenuSheetHeader title="Người chủ trì" />
-            <Combobox.Input aria-label="Tìm người chủ trì" placeholder="Tìm người…" render={<Input variant="menu" />} />
-            <div aria-hidden className="-mx-1 my-1 h-px bg-border" />
+            <Combobox.Input aria-label="Tìm người chủ trì" placeholder="Tìm người…" render={<Input variant="menu" className="mb-1 border-b border-border/60" />} />
             <Combobox.Empty>
               <div className="px-2 py-1.5 text-xs text-muted-foreground">
                 {people.length === 0 ? (loading ? "Đang tải danh sách…" : "Chưa có nhân sự trong đơn vị này") : "Không tìm thấy người phù hợp"}

@@ -1065,7 +1065,7 @@ describe("Chữ trả lời hiện dần (useSmoothText)", () => {
     assert.ok(thread.includes("<AgentReplyText text={reply.text}"));
     // Khung suy nghĩ khi đang trả lời cũng chạy dần
     assert.ok(thread.includes("const thinking = useSmoothText(message.thinking, streaming)"));
-    assert.ok(thread.includes('<p className="whitespace-pre-wrap">{thinking.text}</p>'));
+    assert.ok(thread.includes("<AgentThinkingStream text={thinking.text} />"));
     assert.ok(thread.includes("const settled = !streaming && !reply.revealing"));
     assert.ok(thread.includes("{settled && message.content ? ("));
     const workspace = read("apps/web/src/components/assistant/assistant-workspace.tsx");

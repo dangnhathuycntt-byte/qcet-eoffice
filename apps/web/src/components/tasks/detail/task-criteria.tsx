@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { SectionHeader } from "@/components/ui/section-header";
 import { cn } from "@/lib/utils";
 import { TaskAddPanel } from "./task-add-chip";
 
@@ -184,22 +185,19 @@ export function TaskCriteria({ taskId, version, onVersionChange, status, initial
   const met = total - view.unmet;
 
   return (
-    <section aria-labelledby={`task-criteria-${taskId}`} className={cn("space-y-2 px-4", className)}>
-      <div className="flex items-center gap-2">
-        <h2 id={`task-criteria-${taskId}`} className="text-compact font-semibold text-foreground tracking-tight">
-          Tiêu chí hoàn thành
-        </h2>
-        {total > 0 && !editing && (
-          <span className="text-xs tabular-nums text-muted-foreground">
-            {met}/{total} đạt
-          </span>
-        )}
-        {view.canEdit && !editing && (
-          <Button variant="ghost" size="xs" className="ml-auto" onClick={startEdit}>
-            {total === 0 ? "Thêm tiêu chí" : "Sửa"}
-          </Button>
-        )}
-      </div>
+    <section aria-labelledby={`task-criteria-${taskId}`} className={cn("space-y-2", className)}>
+      <SectionHeader
+        id={`task-criteria-${taskId}`}
+        title="Tiêu chí hoàn thành"
+        meta={total > 0 && !editing ? `${met}/${total} đạt` : null}
+        action={
+          view.canEdit && !editing ? (
+            <Button variant="ghost" size="xs" onClick={startEdit}>
+              {total === 0 ? "Thêm tiêu chí" : "Sửa"}
+            </Button>
+          ) : null
+        }
+      />
 
       {editing ? (
         editForm

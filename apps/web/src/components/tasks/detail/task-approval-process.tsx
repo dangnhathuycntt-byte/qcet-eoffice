@@ -6,6 +6,7 @@ import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Input } from "@/components/ui/input";
+import { SectionHeader, SectionRow } from "@/components/ui/section-header";
 import { Select } from "@/components/ui/select";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { cn } from "@/lib/utils";
@@ -166,15 +167,12 @@ export function TaskApprovalProcess({
 
   return (
     <section aria-label="Luồng duyệt nhiều bước" data-notification-focus="approval" className={cn("space-y-1.5", className)}>
-      <div className="flex items-center gap-2">
-        <h2 className="text-compact font-semibold text-foreground tracking-tight">Luồng duyệt</h2>
-        {view.process ? <span className="text-xs text-muted-foreground">{PROCESS_LABEL[view.process.status]}</span> : null}
-      </div>
+      <SectionHeader title="Luồng duyệt" meta={view.process ? PROCESS_LABEL[view.process.status] : null} />
 
       {view.process ? (
         <ol className="space-y-0.5">
           {view.process.steps.map((s) => (
-            <li key={s.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
+            <SectionRow key={s.id}>
               <span className={cn("min-w-0 truncate", s.current ? "text-foreground" : "text-muted-foreground")} title={s.decisionNote ?? undefined}>
                 {s.order}. {s.title} · {s.reviewer?.name ?? "—"}
                 {s.backupReviewer ? <span className="text-muted-foreground"> (dự phòng: {s.backupReviewer.name})</span> : null}
@@ -182,7 +180,7 @@ export function TaskApprovalProcess({
               <span className={cn("shrink-0", s.status === "REJECTED" ? "text-destructive" : s.backupDue ? "text-warning" : "text-muted-foreground")}>
                 {s.current && s.backupDue ? "Quá 4 ngày, dự phòng duyệt được" : STEP_LABEL[s.status]}
               </span>
-            </li>
+            </SectionRow>
           ))}
         </ol>
       ) : (

@@ -4,6 +4,12 @@ import { cn } from "@/lib/utils";
 import { focusRingClass } from "@/components/ui/focus-ring";
 import { Spinner } from "@/components/ui/spinner";
 
+/**
+ * Vòng 0,5px thay viền và bóng rất nhẹ của bề mặt trắng nổi như Linear (đo trên linear.app 14/10/2026): nút `toolbar`, ô soạn
+ * và thẻ tệp của Trợ lý/Agent.
+ */
+const RAISED_RING_CLASS = "shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]";
+
 const buttonVariants = cva(
   `group/button inline-flex shrink-0 items-center justify-center rounded-md border-0 bg-clip-padding text-sm font-medium whitespace-nowrap transition-colors duration-[var(--motion-duration-micro)] motion-reduce:transition-none outline-none select-none ${focusRingClass} disabled:pointer-events-none disabled:opacity-50 aria-invalid:bg-danger-soft aria-invalid:text-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 cursor-pointer`,
   {
@@ -25,9 +31,8 @@ const buttonVariants = cva(
         // Nút trên nền tối của trình xem ảnh (`bg-scrim-strong`): chữ trắng mờ, rê/tiêu điểm nền trắng 10–15%, viền tiêu điểm trắng
         overlay:
           "text-white/80 hover:bg-white/10 hover:text-white focus-visible:bg-white/15 focus-visible:text-white focus-visible:outline-white",
-        // Nút phụ nền trắng như Linear (Documentation, Add filter): vòng 0,5px thay viền và bóng rất nhẹ (đo trên linear.app 14/10/2026).
-        toolbar:
-          "bg-background text-foreground shadow-[0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)] hover:bg-accent",
+        // Nút phụ nền trắng như Linear (Documentation, Add filter): vòng 0,5px thay viền và bóng rất nhẹ (`RAISED_RING_CLASS`).
+        toolbar: `bg-background text-foreground ${RAISED_RING_CLASS} hover:bg-accent`,
       },
       size: {
         default:
@@ -101,4 +106,4 @@ Button.displayName = "Button";
 // 500 mới ra cùng độ đậm, so ảnh Retina 17/10/2026), icon đầu cách lề 6px; đang mở = nền selected, lỗi = aria-invalid
 const PROPERTY_PILL_CLASS = cn(buttonVariants({ variant: "toolbar", size: "pill-xs" }), "pl-1.5 data-[popup-open]:bg-selected");
 
-export { Button, buttonVariants, PROPERTY_PILL_CLASS };
+export { Button, buttonVariants, PROPERTY_PILL_CLASS, RAISED_RING_CLASS };

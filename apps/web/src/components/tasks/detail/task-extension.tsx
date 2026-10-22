@@ -5,6 +5,7 @@ import { fetchWithRetry } from "@/lib/fetch-with-retry";
 import { useBlockSeed } from "@/hooks/use-block-seed";
 import { Button } from "@/components/ui/button";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { SectionHeader } from "@/components/ui/section-header";
 import { Textarea } from "@/components/ui/textarea";
 import { VietnameseDatePicker } from "@/components/ui/vietnamese-date-picker";
 import { cn } from "@/lib/utils";
@@ -171,18 +172,19 @@ export function TaskExtension({ taskId, version, status, onTaskChange, initialDa
   }
 
   return (
-    <section aria-label="Xin gia hạn" data-notification-focus="extension" className={cn("space-y-2 px-4", className)}>
-      <div className="flex items-center gap-2">
-        <h2 className="text-compact font-semibold text-foreground tracking-tight">Gia hạn</h2>
-        {view.appliedCount >= 3 && (
-          <span className="text-xs text-warning">Đã gia hạn {view.appliedCount} lần</span>
-        )}
-        {!active && view.canRequest && mode === "idle" && (
-          <Button variant="ghost" size="xs" className="ml-auto" onClick={() => setMode("request")}>
-            Xin gia hạn
-          </Button>
-        )}
-      </div>
+    <section aria-label="Xin gia hạn" data-notification-focus="extension" className={cn("space-y-2", className)}>
+      <SectionHeader
+        title="Gia hạn"
+        meta={view.appliedCount >= 3 ? `Đã gia hạn ${view.appliedCount} lần` : null}
+        metaTone="warning"
+        action={
+          !active && view.canRequest && mode === "idle" ? (
+            <Button variant="ghost" size="xs" onClick={() => setMode("request")}>
+              Xin gia hạn
+            </Button>
+          ) : null
+        }
+      />
 
       {active && (
         <div className="space-y-1.5 text-compact">

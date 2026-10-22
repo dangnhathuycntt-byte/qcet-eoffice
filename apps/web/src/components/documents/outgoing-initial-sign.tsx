@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
+import { SectionHeader } from "@/components/ui/section-header";
 import { cn } from "@/lib/utils";
 
 interface State {
@@ -56,10 +57,7 @@ export function OutgoingInitialSign({ documentId, className }: { documentId: str
 
   return (
     <section aria-label="Ký nháy" className={cn("space-y-1", className)}>
-      <div className="flex items-center gap-2">
-        <h3 className="text-compact font-semibold text-foreground">Ký nháy</h3>
-        <span className="text-xs text-muted-foreground">Tùy chọn</span>
-      </div>
+      <SectionHeader as="h3" title="Ký nháy" meta="Tùy chọn" />
       {initials.length > 0 && (
         <ul className="space-y-0.5">
           {initials.map((r) => (

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowDown, BookmarkPlus, FileText, Pencil, RotateCcw } from "lucide-react";
 import { ASSISTANT_MESSAGE_MAX, type AssistantActionDTO, type AssistantSourceRef, type AssistantTaskProposal } from "@qcet/contracts/assistant";
 import { agentReplyToPlainText } from "@qcet/shared/domain/tasks/agent-reply-format";
-import { AgentReplyText, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
+import { AgentReplyText, AgentThinkingStream, AgentWorkLog, CopyMessageButton } from "@/components/agent-chat/agent-chat-parts";
 import { AttachmentCard, StoredAttachmentCard } from "@/components/agent-chat/agent-attachments";
 import { useSmoothText } from "@/components/agent-chat/use-smooth-text";
 import { Button } from "@/components/ui/button";
@@ -394,9 +394,7 @@ function ReplyTurn({
 
       {streaming && message.content === "" && thinking.text ? (
         // Suy nghĩ tới dần khi chữ trả lời chưa bắt đầu; hết suy nghĩ thì ẩn
-        <div className="flex max-h-28 flex-col justify-end overflow-hidden break-words border-l-2 border-border pl-3 text-xs leading-relaxed text-muted-foreground [mask-image:linear-gradient(to_bottom,transparent,black_2.5rem)]">
-          <p className="whitespace-pre-wrap">{thinking.text}</p>
-        </div>
+        <AgentThinkingStream text={thinking.text} />
       ) : null}
 
       {reply.text ? <AgentReplyText text={reply.text} sources={message.sources} /> : null}

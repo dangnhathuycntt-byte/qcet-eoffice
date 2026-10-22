@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { SectionHeader } from "@/components/ui/section-header";
 import { cn } from "@/lib/utils";
 
 interface ReturnRow {
@@ -34,7 +35,7 @@ export function IncomingReturnHistory({ documentId, refreshKey, className }: { d
   if (rows.length === 0) return null;
   return (
     <section aria-label="Lịch sử trả lại" className={cn("space-y-1", className)}>
-      <h3 className="text-compact font-semibold text-foreground">Lịch sử trả lại</h3>
+      <SectionHeader as="h3" title="Lịch sử trả lại" />
       <ul className="space-y-1">
         {rows.map((r) => (
           <li key={r.id} className="text-xs text-foreground">

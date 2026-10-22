@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { SectionHeader, SectionRow } from "@/components/ui/section-header";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useDepartmentList } from "@/hooks/use-department-list";
@@ -107,15 +108,12 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
 
   return (
     <section aria-label="Theo dõi nơi nhận" className={cn("space-y-2", className)}>
-      <div className="flex items-center gap-2">
-        <h3 className="text-compact font-semibold text-foreground">Theo dõi nơi nhận</h3>
-        {state.status === "RECALLED" ? <span className="text-xs text-destructive">Đã thu hồi</span> : null}
-      </div>
+      <SectionHeader as="h3" title="Theo dõi nơi nhận" meta={state.status === "RECALLED" ? "Đã thu hồi" : null} metaTone="destructive" />
 
       {state.recipients.length > 0 && (
         <ul className="space-y-0.5">
           {state.recipients.map((r) => (
-            <li key={r.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 text-xs">
+            <SectionRow key={r.id}>
               <span className="min-w-0 truncate text-foreground" title={r.name}>{r.name}</span>
               {r.receivedAt ? (
                 <span className="shrink-0 text-muted-foreground">Đã nhận {formatDate(r.receivedAt)}</span>
@@ -126,7 +124,7 @@ export function OutgoingRecipientsPanel({ documentId, onChanged, className }: { 
               ) : (
                 <span className="shrink-0 text-muted-foreground">Chưa nhận</span>
               )}
-            </li>
+            </SectionRow>
           ))}
         </ul>
       )}
