@@ -842,6 +842,15 @@
   100% { transform: translateX(100%); }
 }
 
+/* Ô của cột bảng bớt đi khi khung hẹp (`@max-[…px]:cell-collapse`, kèm `<col>` thu về `w-0`): giữ chỗ trong lưới, chỉ vô hình.
+   `display:none` rút ô khỏi lưới nên ô sau dồn sang trái vào chỗ cột đã thu, còn hàng nhóm `colSpan` thì vẫn giữ cột đó và bảng
+   `table-fixed` chia phần còn lại với cột tên (22/10/2026: Tiêu đề 371px → 124px khi nhóm ở 1000px). */
+@utility cell-collapse {
+  visibility: hidden;
+  padding: 0;
+  overflow: hidden;
+}
+
 /* Khối bao trạng thái rỗng kiểu trang: có EmptyState density="page" bên trong thì thành cột lấp hết phần còn lại, để khối trống
    đứng giữa vùng như trang Nhiệm vụ (người dùng báo trang Yêu cầu phối hợp nằm cao 21/10/2026). Gắn trên mọi khối bao giữa vùng
    cuộn (vùng cuộn để `flex flex-col`) và EmptyState; EmptyState trang tự giãn (`grow`). */
