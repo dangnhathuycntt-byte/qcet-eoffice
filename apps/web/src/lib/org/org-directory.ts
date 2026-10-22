@@ -180,6 +180,37 @@ export function matchesMember(member: OrgMember, query: string): boolean {
   return matchesTokens([member.name, member.email, member.position ?? "", member.unitName, digits].join(" "), query);
 }
 
+export interface TextSegment {
+  text: string;
+  match: boolean;
+}
+
+/**
+ * Đoạn chữ khớp truy vấn để in đậm, cùng quy tắc với bộ lọc: từng từ khớp ở bất kỳ đâu, không phân biệt dấu (kể cả đ/d).
+ * Mỗi ký tự gốc gập thành đúng một ký tự nên vị trí trên bản gập dùng thẳng cho chữ gốc.
+ */
+export function highlightQueryTokens(text: string, query: string): TextSegment[] {
+  const tokens = foldVietnamese(query).split(/\s+/).filter(Boolean);
+  const source = text.normalize("NFC");
+  if (!source || tokens.length === 0) return [{ text: source, match: false }];
+  const chars = Array.from(source, (ch) => foldVietnamese(ch) || ch.toLowerCase());
+  if (chars.some((ch) => ch.length !== 1) || chars.length !== source.length) return [{ text: source, match: false }];
+  const folded = chars.join("");
+  const marked: boolean[] = new Array(source.length).fill(false);
+  for (const token of tokens) {
+    for (let i = folded.indexOf(token); i !== -1; i = folded.indexOf(token, i + token.length)) marked.fill(true, i, i + token.length);
+  }
+  const segments: TextSegment[] = [];
+  let start = 0;
+  for (let i = 1; i <= source.length; i++) {
+    if (i === source.length || marked[i] !== marked[start]) {
+      segments.push({ text: source.slice(start, i), match: marked[start] });
+      start = i;
+    }
+  }
+  return segments;
+}
+
 export function matchesUnit(unit: OrgUnit, query: string): boolean {
   return matchesTokens([unit.name, unit.code, ...unit.leaders.map((l) => l.name)].join(" "), query);
 }

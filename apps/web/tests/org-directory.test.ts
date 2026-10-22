@@ -5,6 +5,7 @@ import {
   countPeople,
   directoryToCsv,
   filterDirectory,
+  highlightQueryTokens,
   matchesUnit,
   type OrgUnitInput,
 } from "../src/lib/org/org-directory";
@@ -134,5 +135,19 @@ describe("Cơ cấu & Danh bạ: dựng từ đơn vị trong DB", () => {
     const [header, row] = csv.split("\r\n");
     assert.equal(header, '"Họ và tên","Chức vụ","Đơn vị","Email","Điện thoại"');
     assert.equal(row, '"Đặng ""Hùng""","Hiệu trưởng","Trường Cao đẳng Kỹ thuật Công nghệ Quy Nhơn","\'=HYPERLINK(1)","+84 256 384"');
+  });
+
+  test("in đậm từng từ khớp ở bất kỳ đâu, không phân biệt dấu kể cả đ/d, giữ nguyên chữ gốc", () => {
+    const bold = (text: string, query: string) =>
+      highlightQueryTokens(text, query)
+        .filter((s) => s.match)
+        .map((s) => s.text);
+    assert.deepEqual(bold("Đặng Nhật Huy", "dang huy"), ["Đặng", "Huy"]);
+    assert.deepEqual(bold("Trưởng phòng Đào tạo", "dao"), ["Đào"]);
+    assert.deepEqual(bold("hangntt@cdktcnqn.edu.vn", "ntt"), ["ntt"]);
+    assert.equal(highlightQueryTokens("Lê Văn Thí", "").map((s) => s.text).join(""), "Lê Văn Thí");
+    assert.deepEqual(bold("Lê Văn Thí", "xyz"), []);
+    // Chữ ghép từ dấu rời (NFD) vẫn tô đúng sau khi chuẩn hóa
+    assert.deepEqual(bold("Tr\u01b0\u01a1\u0300ng".normalize("NFD"), "truong"), ["Trường"]);
   });
 });
