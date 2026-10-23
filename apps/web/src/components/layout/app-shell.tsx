@@ -227,16 +227,18 @@ function AppShellInner({ children, assistantEnabled = false }: { children: React
         {/* Inner Content Panel: White canvas with rounded top-left corner.
             Thẻ trang cách mép sidebar 8px (`md:ml-2`) như thẻ của chi tiết nhiệm vụ: nút thu gọn thanh bên nằm gọn trong khe đó
             thay vì đè lên viền thẻ (người dùng yêu cầu 20/10/2026). Trang workspace tự lùi thẻ bằng lề trong của nó. */}
+        {/* `relative`: khối chứa của mọi phần tử `absolute` không có tổ tiên định vị trong trang (`sr-only` trong hàng bảng, trong hộp thoại…). Không có thì khối
+            chứa là khung ngoài cùng, `overflow-hidden` của main không cắt chúng và cuộn cả trang (người dùng báo "thanh scroll to" 23/10/2026). */}
         <main
           id="main-content"
           tabIndex={-1}
           className={isWorkspaceShell
-            ? "flex flex-1 min-h-0 min-w-0 flex-col md:mt-2 outline-none overflow-hidden"
+            ? "relative flex flex-1 min-h-0 min-w-0 flex-col md:mt-2 outline-none overflow-hidden"
             : isFullHeightPane
-            ? "flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:ml-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:rounded-md md:border-hairline md:border-border md:bg-card md:shadow-low outline-none overflow-hidden"
+            ? "relative flex flex-none min-w-0 flex-col h-[100dvh] md:mt-2 md:mr-2 md:mb-2 md:ml-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:rounded-md md:border-hairline md:border-border md:bg-card md:shadow-low outline-none overflow-hidden"
             : cn(
                 // Khung nội dung như Linear (đo 22/10/2026): bo 12px, viền mảnh, bóng thấp
-                "flex-1 flex flex-col md:ml-2 md:border-t-(length:--border-hairline) md:border-l-(length:--border-hairline) md:border-border md:bg-card md:shadow-low min-h-[calc(100dvh-44px)] md:min-h-[calc(100dvh-44px-var(--app-statusbar))] outline-none overflow-hidden",
+                "relative flex-1 flex flex-col md:ml-2 md:border-t-(length:--border-hairline) md:border-l-(length:--border-hairline) md:border-border md:bg-card md:shadow-low min-h-[calc(100dvh-44px)] md:min-h-[calc(100dvh-44px-var(--app-statusbar))] outline-none overflow-hidden",
                 // Trang danh sách (Nhiệm vụ, Cuộc họp): khung bo đủ 4 góc, cách mép phải và dưới 8px như chi tiết
                 isListPage ? "md:rounded-md md:border-r-(length:--border-hairline) md:border-b-(length:--border-hairline) md:mr-2 md:mb-2" : "md:rounded-tl-md",
                 hideDesktopTopbar && (isListPage ? "md:mt-2 md:h-[calc(100dvh-16px-var(--app-statusbar))] md:flex-none" : "md:mt-2 md:min-h-[calc(100dvh-8px-var(--app-statusbar))]")

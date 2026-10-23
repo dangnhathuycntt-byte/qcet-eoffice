@@ -243,9 +243,11 @@ describe("Hộp thư kiểu Notion: bấm thông báo tới đúng chỗ", () =>
     assert.equal(getNotificationDisplayTitle({ ...base, type: "x", title: "[GIAO VIỆC] [QĐ] Ban hành quy chế" }), "[QĐ] Ban hành quy chế");
   });
 
-  test("số trên nút Hộp thư: ẩn khi 0, quá 9 ghi 9+", () => {
+  test("số chưa đọc: ẩn khi 0, hiện số thật tới 99, quá 99 ghi 99+", () => {
     assert.equal(formatUnreadBadge(0), "");
     assert.equal(formatUnreadBadge(5), "5");
-    assert.equal(formatUnreadBadge(10), "9+");
+    assert.equal(formatUnreadBadge(30), "30");
+    assert.equal(formatUnreadBadge(99), "99");
+    assert.equal(formatUnreadBadge(100), "99+");
   });
 });

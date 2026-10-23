@@ -308,8 +308,8 @@ export function getNotificationSnippet(notification: QCETNotification): string {
   return quoted ? quoted[1].trim() : "";
 }
 
-/** Số trên nút Hộp thư: không hiện khi 0, quá 9 ghi "9+". */
+/** Số chưa đọc ở nơi có chỗ (tab Chưa đọc, hàng Hộp thư trong ngăn kéo): không hiện khi 0, quá 99 ghi "99+" (M3: tối đa bốn ký tự; "9+" làm 30 thư trông như 10). */
 export function formatUnreadBadge(count: number): string {
   if (!Number.isFinite(count) || count <= 0) return "";
-  return count > 9 ? "9+" : String(Math.floor(count));
+  return count > 99 ? "99+" : String(Math.floor(count));
 }
