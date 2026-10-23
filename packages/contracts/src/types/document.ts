@@ -68,6 +68,30 @@ export interface DocumentDirectiveItem {
   createdAt?: string;
 }
 
+/** Thao tác theo bước của văn bản đi; mỗi giá trị là tên route `/api/documents/{id}/actions/{slug}`. */
+export type OutgoingStepSlug =
+  | 'submit-content-review'
+  | 'approve-content'
+  | 'reject-content'
+  | 'approve-format'
+  | 'sign'
+  | 'assign-number'
+  | 'organization-sign';
+
+/** Ai đang giữ bước và việc đang chờ; hiện thành "Đang chờ <who> <task>". */
+export interface OutgoingWaiting {
+  who: string;
+  task: string;
+  /** Thời điểm bước bắt đầu chờ (ISO), khi biết. */
+  since: string | null;
+}
+
+/** Thao tác người xem được làm lúc này và việc đang chờ; server tính cho từng người xem. */
+export interface OutgoingStepView {
+  actions: OutgoingStepSlug[];
+  waiting: OutgoingWaiting | null;
+}
+
 export interface DocumentItem {
   id: string;
   type: DocumentType;
@@ -111,6 +135,8 @@ export interface DocumentItem {
   /** Người đang xem đã đánh dấu văn bản này. */
   marked?: boolean;
   outgoingWorkflow?: any;
+  /** Văn bản đi: thao tác của bước đang chờ mà người xem được làm và ai đang giữ bước; server tính theo người xem. */
+  outgoingStep?: OutgoingStepView | null;
   /** Nơi nhận có định danh của văn bản đi; đơn vị trong trường đọc được văn bản từ lúc phát hành (ADR-015). */
   outgoingRecipients?: Array<{ kind: string; unitId: string | null }>;
   signatures?: any[];

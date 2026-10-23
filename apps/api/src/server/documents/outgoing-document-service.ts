@@ -56,6 +56,7 @@ import {
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@qcet/shared/config/institution";
 import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
+import type { OutgoingStepSlug } from "@qcet/shared/domain/documents/outgoing-steps";
 import {
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
@@ -235,6 +236,105 @@ async function assertContentReviewScope(
   }
 }
 
+/** Dữ liệu cần để xét ai được làm bước nào; `existing` của mọi lệnh bước (kèm `document`) thỏa kiểu này. */
+export interface OutgoingStepSubject {
+  documentId: string;
+  status: OutgoingDocumentStatus;
+  contentReviewerId: string | null;
+  formatReviewerId: string | null;
+  authorizedSignerId: string | null;
+  draftingUnitId: string | null;
+  document: { registeredById: string; signerName: string | null };
+}
+
+type StepAuthCheck = (action: Parameters<typeof assertAuthorized>[1], resource: AuthorizationResource) => Promise<unknown>;
+
+/** Phó Hiệu trưởng ký thay (KT.), còn lại ký chức danh của người có thẩm quyền. */
+function outgoingSignAction(user: AuthenticatedUserContext): "document.outgoing.authorized_sign" | "document.outgoing.sign_kt" {
+  const pos = (user.activePositionCode || "").toUpperCase();
+  return pos.includes("PHO_HIEU_TRUONG") || pos.includes("PHT")
+    ? "document.outgoing.sign_kt"
+    : "document.outgoing.authorized_sign";
+}
+
+/**
+ * Người làm có được làm bước này không: phân tách nhiệm vụ, phạm vi duyệt rồi quyền theo chức danh. Lệnh ghi và việc
+ * tính thao tác hiện cho người xem (`outgoingStep`) cùng đi qua đây nên nút hiện đúng bằng điều server chấp nhận.
+ * `check` là `assertAuthorized` ở lệnh ghi; ở việc tính nút là phép kiểm không ghi nhật ký từ chối.
+ * Trạng thái xuất phát do từng lệnh kiểm trước (409 đứng trước 403).
+ */
+export async function runOutgoingStepGate(
+  step: OutgoingStepSlug,
+  user: AuthenticatedUserContext,
+  existing: OutgoingStepSubject,
+  check: StepAuthCheck
+): Promise<void> {
+  const drafterId = existing.document.registeredById;
+  const id = existing.documentId;
+  const owner = { primaryOwnerId: drafterId, createdById: drafterId };
+  switch (step) {
+    case "submit-content-review":
+      // Chỉ người soạn trình dự thảo của mình; quyền theo chức danh không phân biệt người soạn với người khác.
+      if (user.id !== drafterId) throw new ForbiddenError("Chỉ người soạn mới trình duyệt dự thảo của mình.");
+      await check("document.outgoing.submit_content_review", { id, type: "document", scope: "unit", ...owner, drafterId });
+      return;
+    case "approve-content":
+    case "reject-content":
+      // Separation of Duties: người soạn không tự duyệt hay trả lại nội dung của mình.
+      OutgoingDocumentStateMachine.assertDrafterNotContentReviewer(drafterId, user.id);
+      await assertContentReviewScope(user.id, existing);
+      await check(
+        step === "approve-content" ? "document.outgoing.approve_content" : "document.outgoing.review_content",
+        { id, type: "document", scope: "unit", ...owner, drafterId, draftingUserId: drafterId }
+      );
+      return;
+    case "approve-format":
+      await check("document.outgoing.approve_format", { id, type: "document", scope: "school", ...owner, drafterId });
+      return;
+    case "sign":
+      // Separation of Duties: người kiểm thể thức không tự ký thẩm quyền.
+      if (existing.formatReviewerId === user.id) {
+        throw new ForbiddenError(
+          "Cán bộ kiểm tra thể thức không được tự ký thẩm quyền văn bản (Format Checker != Signer)."
+        );
+      }
+      await check(outgoingSignAction(user), {
+        id,
+        type: "document",
+        scope: "school",
+        ...owner,
+        drafterId,
+        formatReviewerId: existing.formatReviewerId || undefined,
+      });
+      return;
+    case "assign-number":
+    case "organization-sign": {
+      // Separation of Duties: người ký không tự cấp số hay đóng dấu số cơ quan.
+      if (step === "assign-number") {
+        OutgoingDocumentStateMachine.assertSignerNotNumberer(existing.authorizedSignerId, user.id);
+      } else {
+        OutgoingDocumentStateMachine.assertSignerNotOrganizationSigner(existing.authorizedSignerId, user.id);
+      }
+      if (existing.document.signerName === user.name) {
+        throw new ForbiddenError(
+          step === "assign-number"
+            ? "Người ký văn bản không được tự cấp số hoặc đóng dấu số cơ quan (Signer != Numberer)."
+            : "Người ký văn bản không được tự đóng dấu số cơ quan (Signer != Org Signer)."
+        );
+      }
+      await check(step === "assign-number" ? "document.outgoing.assign_number" : "document.outgoing.organization_sign", {
+        id,
+        type: "document",
+        scope: "school",
+        ...owner,
+        signerId: existing.authorizedSignerId || undefined,
+        authorizedSignerId: existing.authorizedSignerId || undefined,
+      });
+      return;
+    }
+  }
+}
+
 export class OutgoingDocumentService {
   /**
    * Helper to verify that a signed document cannot be modified directly.
@@ -409,16 +509,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "unit",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-    };
-
-    await assertAuthorized(user, "document.outgoing.submit_content_review", resource);
+    await runOutgoingStepGate("submit-content-review", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -499,24 +592,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Drafter cannot approve content!
-    OutgoingDocumentStateMachine.assertDrafterNotContentReviewer(
-      existing.document.registeredById,
-      user.id
+    await runOutgoingStepGate("approve-content", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
     );
-    await assertContentReviewScope(user.id, existing);
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "unit",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-      draftingUserId: existing.document.registeredById,
-    };
-
-    await assertAuthorized(user, "document.outgoing.approve_content", resource);
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -594,24 +672,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Drafter cannot review/reject content as reviewer
-    OutgoingDocumentStateMachine.assertDrafterNotContentReviewer(
-      existing.document.registeredById,
-      user.id
+    await runOutgoingStepGate("reject-content", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
     );
-    await assertContentReviewScope(user.id, existing);
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "unit",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-      draftingUserId: existing.document.registeredById,
-    };
-
-    await assertAuthorized(user, "document.outgoing.review_content", resource);
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -764,16 +827,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "school",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-    };
-
-    await assertAuthorized(user, "document.outgoing.approve_format", resource);
+    await runOutgoingStepGate("approve-format", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -857,32 +913,8 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Format reviewer cannot sign as authorized signer!
-    if (existing.formatReviewerId === user.id) {
-      throw new ForbiddenError(
-        "Cán bộ kiểm tra thể thức không được tự ký thẩm quyền văn bản (Format Checker != Signer)."
-      );
-    }
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "school",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-      formatReviewerId: existing.formatReviewerId || undefined,
-    };
-
-    // Determine appropriate sign action
-    let signAction: "document.outgoing.authorized_sign" | "document.outgoing.sign_kt" =
-      "document.outgoing.authorized_sign";
-    const pos = (user.activePositionCode || "").toUpperCase();
-    if (pos.includes("PHO_HIEU_TRUONG") || pos.includes("PHT")) {
-      signAction = "document.outgoing.sign_kt";
-    }
-
-    await assertAuthorized(user, signAction, resource);
+    const signAction = outgoingSignAction(user);
+    await runOutgoingStepGate("sign", user, existing, (action, resource) => assertAuthorized(user, action, resource));
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -993,25 +1025,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Signer cannot assign number!
-    OutgoingDocumentStateMachine.assertSignerNotNumberer(existing.authorizedSignerId, user.id);
-    if (existing.document.signerName === user.name) {
-      throw new ForbiddenError(
-        "Người ký văn bản không được tự cấp số hoặc đóng dấu số cơ quan (Signer != Numberer)."
-      );
-    }
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "school",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      signerId: existing.authorizedSignerId || undefined,
-      authorizedSignerId: existing.authorizedSignerId || undefined,
-    };
-
-    await assertAuthorized(user, "document.outgoing.assign_number", resource);
+    await runOutgoingStepGate("assign-number", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
 
     // A retry for an already-numbered document returns the original assignment. Do this
     // after authorization so callers cannot use an idempotent response to inspect a
@@ -1154,28 +1170,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Signer cannot organization-sign!
-    OutgoingDocumentStateMachine.assertSignerNotOrganizationSigner(
-      existing.authorizedSignerId,
-      user.id
+    await runOutgoingStepGate("organization-sign", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
     );
-    if (existing.document.signerName === user.name) {
-      throw new ForbiddenError(
-        "Người ký văn bản không được tự đóng dấu số cơ quan (Signer != Org Signer)."
-      );
-    }
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "school",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      signerId: existing.authorizedSignerId || undefined,
-      authorizedSignerId: existing.authorizedSignerId || undefined,
-    };
-
-    await assertAuthorized(user, "document.outgoing.organization_sign", resource);
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();

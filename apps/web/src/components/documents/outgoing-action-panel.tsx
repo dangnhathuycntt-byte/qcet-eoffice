@@ -12,6 +12,7 @@ import {
   RotateCcw,
   AlertCircle,
   CheckCircle2,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { StandardDialog } from "@/components/ui/dialog";
 import type { OutgoingDocumentStatus } from "@qcet/contracts/documents";
-import { OUTGOING_STEP_ACTIONS } from "@/lib/documents/outgoing-step-actions";
+import type { OutgoingStepSlug, OutgoingStepView } from "@qcet/contracts/types/document";
+import { OUTGOING_STEP_ACTIONS } from "@qcet/shared/domain/documents/outgoing-steps";
+import { readApiErrorMessage } from "@/lib/documents/api-error";
+import { formatDateTime } from "@/lib/format";
 
 import { Spinner } from "@/components/ui/spinner";
 interface ActionDef {
@@ -76,18 +80,23 @@ const ACTION_UI: Record<string, Omit<ActionDef, "action" | "requiresNote">> = {
   },
 };
 
-/** Nút theo trạng thái, lấy từ bảng thao tác chung để khớp với route và máy trạng thái. */
-const STATUS_ACTIONS: Partial<Record<OutgoingDocumentStatus, ActionDef[]>> = Object.fromEntries(
-  Object.entries(OUTGOING_STEP_ACTIONS).map(([status, list]) => [
-    status,
-    (list ?? []).map((step) => ({ ...ACTION_UI[step.action], action: step.action, requiresNote: step.requiresNote })),
-  ])
+/** Bước cần nhập lý do (gửi trong `notes`), lấy từ bảng thao tác chung để khớp với route. */
+const NOTE_REQUIRED = new Set<string>(
+  Object.values(OUTGOING_STEP_ACTIONS)
+    .flat()
+    .filter((step) => step?.requiresNote)
+    .map((step) => step!.action)
 );
+
+function actionDef(slug: OutgoingStepSlug): ActionDef {
+  return { ...ACTION_UI[slug], action: slug, requiresNote: NOTE_REQUIRED.has(slug) };
+}
 
 export interface OutgoingActionPanelProps {
   documentId: string;
   status: OutgoingDocumentStatus;
-  currentUserId: string;
+  /** Server tính theo người xem: thao tác của bước đang chờ mà họ được làm, và ai đang giữ bước. */
+  step: OutgoingStepView | null | undefined;
   className?: string;
   onActionSuccess?: () => void;
 }
@@ -95,7 +104,7 @@ export interface OutgoingActionPanelProps {
 export function OutgoingActionPanel({
   documentId,
   status,
-  currentUserId: _currentUserId,
+  step,
   className,
   onActionSuccess,
 }: OutgoingActionPanelProps) {
@@ -106,7 +115,8 @@ export function OutgoingActionPanel({
   const [confirmAction, setConfirmAction] = React.useState<ActionDef | null>(null);
   const [note, setNote] = React.useState("");
 
-  const actions = STATUS_ACTIONS[status] ?? [];
+  const actions = (step?.actions ?? []).map(actionDef);
+  const waiting = step?.waiting ?? null;
 
   async function executeAction(actionDef: ActionDef, noteValue?: string) {
     setPending(actionDef.action);
@@ -122,10 +132,7 @@ export function OutgoingActionPanel({
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.message || `Thao tác thất bại (${res.status})`);
-      }
+      if (!res.ok) throw new Error(await readApiErrorMessage(res, `Thao tác thất bại (${res.status})`));
 
       setSuccess(`${actionDef.label} thành công.`);
       onActionSuccess?.();
@@ -151,6 +158,18 @@ export function OutgoingActionPanel({
   }
 
   if (actions.length === 0) {
+    // Chưa đến lượt người xem: nói ai đang giữ bước thay vì hiện nút sẽ bị từ chối
+    if (waiting) {
+      return (
+        <p className={cn("flex items-center gap-1.5 text-compact text-muted-foreground", className)}>
+          <Clock className="size-4 shrink-0" aria-hidden />
+          <span>
+            Đang chờ <span className="font-medium text-foreground">{waiting.who}</span> {waiting.task}
+            {waiting.since ? <span className="tabular-nums"> · từ {formatDateTime(waiting.since)}</span> : null}
+          </span>
+        </p>
+      );
+    }
     if (status === "ISSUED") {
       return (
         <p className={cn("flex items-center gap-1.5 text-compact text-muted-foreground", className)}>

@@ -35,6 +35,7 @@ import {
   authorize,
 } from "@/server/authorization";
 import { readDocumentForUser } from "@/server/documents/read-document-for-user";
+import { buildOutgoingStepView } from "@/server/documents/outgoing-step-view";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -68,6 +69,8 @@ export async function GET(
     const documentDTO = toDocumentDetailDTO(document);
     // Cùng điều kiện với PATCH và bổ sung tệp: UI chỉ hiện "Sửa"/"Thêm tệp" khi thao tác thực sự được phép
     const canEdit = canUpdateDocument(authContext, document) && !isDocumentImmutable(document);
+    // Văn bản đi: thao tác của bước đang chờ mà người xem được làm, và ai đang giữ bước (null ở loại khác)
+    const outgoingStep = await buildOutgoingStepView(authUser, document);
 
     return apiSuccess(
       {
@@ -77,12 +80,14 @@ export async function GET(
           availableActions,
           canEdit,
           marked,
+          outgoingStep,
         },
         document: {
           ...documentDTO,
           availableActions,
           canEdit,
           marked,
+          outgoingStep,
         },
         availableActions,
       },
