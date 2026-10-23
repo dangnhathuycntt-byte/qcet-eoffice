@@ -10,12 +10,12 @@ import { recipientsForPendingSteps } from "@/server/documents/submission-approva
 import { AWAITING_RECEIPT_STATUSES } from "@qcet/shared/domain/documents/delivery-rules";
 import type { OutboxEvent } from "@prisma/client";
 
-function payloadOf(event: OutboxEvent): Record<string, unknown> {
+export function payloadOf(event: OutboxEvent): Record<string, unknown> {
   const p = event.payload;
   return p && typeof p === "object" && !Array.isArray(p) ? (p as Record<string, unknown>) : {};
 }
 
-function str(p: Record<string, unknown>, key: string): string | null {
+export function str(p: Record<string, unknown>, key: string): string | null {
   const v = p[key];
   return typeof v === "string" && v.trim() ? v : null;
 }
@@ -29,7 +29,7 @@ async function unitLeaderIds(db: DbClient, unitId: string): Promise<string[]> {
   return rows.filter((r) => isUnitLeaderPosition(r.positionDefinition.code)).map((r) => r.userId);
 }
 
-async function notifyUsers(
+export async function notifyUsers(
   db: DbClient,
   documentId: string,
   recipientIds: string[],

@@ -30,7 +30,7 @@ describe('thao tác theo bước của văn bản đi khớp máy trạng thái 
     assert.deepEqual(at('CONTENT_REVIEW'), ['approve-content', 'reject-content', 'withdraw-content-review']);
     assert.equal(OUTGOING_STEP_ACTIONS.CONTENT_REVIEW?.find((a) => a.action === 'reject-content')?.requiresNote, true);
     assert.deepEqual(at('ORGANIZATION_SIGNED'), [], 'phát hành làm ở khối nơi nhận');
-    assert.ok(!Object.values(OUTGOING_STEP_ACTIONS).flat().some((a) => a?.action === 'revision'), 'revision là sửa đổi sau phát hành, không phải trả lại dự thảo');
+    assert.ok(!Object.values(OUTGOING_STEP_ACTIONS).flat().some((a) => (a?.action as string) === 'revision'), 'revision là sửa đổi sau phát hành, không phải trả lại dự thảo');
   });
 });
 
