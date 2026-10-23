@@ -58,7 +58,6 @@ export interface DocumentViewModel {
   linkedTaskId: string | null;
   linkedTask: ViewLinkedTask | null;
   /** Văn bản đã có chữ ký số (mở hộp thoại xem chữ ký). */
-  hasSignature: boolean;
 }
 
 const KIND_BY_TYPE: Record<string, DocumentKind> = {
@@ -188,7 +187,6 @@ export function fromDocumentItem(item: DocumentItem, now?: string): DocumentView
     files,
     linkedTaskId: item.linkedTaskId ?? null,
     linkedTask,
-    hasSignature: (item.signatures?.length ?? 0) > 0,
   };
 }
 
@@ -232,6 +230,5 @@ export function fromOfficialDocument(doc: OfficialDocument, now?: string): Docum
           progressPercent: doc.linkedTaskProgressPercent,
         }
       : null,
-    hasSignature: (doc.signatures?.length ?? 0) > 0,
   };
 }

@@ -1,5 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, readFileSync } from "node:fs";
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { DocumentQuickView } from "../src/components/documents/workspace/document-quick-view";
@@ -65,8 +66,16 @@ describe("Quick View (SSR markup)", () => {
     assert.ok(!html.includes('aria-label="In phiếu văn bản"'));
   });
 
-  test("xem chữ ký số không còn là nút riêng ở header (nằm trong menu Thao tác khác)", () => {
-    assert.ok(!render("pane", { onViewSignature: () => {} }).includes('aria-label="Xem chữ ký số"'));
+  test("không còn lối mở hộp ký số mô phỏng (spec Văn bản G1/G4): hộp đã xóa, không nút, không mục menu", () => {
+    assert.ok(!render("pane").includes("Xem chữ ký số"));
+    const sources = [
+      "../src/components/documents/workspace/document-quick-view.tsx",
+      "../src/components/documents/document-registry-view.tsx",
+    ].map((rel) => readFileSync(new URL(rel, import.meta.url), "utf8"));
+    for (const source of sources) {
+      assert.ok(!source.includes("DigitalSignatureDialog") && !source.includes("onViewSignature"));
+    }
+    assert.equal(existsSync(new URL("../src/lib/crypto/digital-signature-service.ts", import.meta.url)), false);
   });
 
   test("header có Sao chép liên kết ở cả pane và overlay (21/10/2026, như menu của dòng và chi tiết nhiệm vụ)", () => {

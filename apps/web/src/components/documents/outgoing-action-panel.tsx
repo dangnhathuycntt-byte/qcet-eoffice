@@ -70,8 +70,8 @@ const ACTION_UI: Record<string, Omit<ActionDef, "action" | "requiresNote">> = {
     icon: FileCheck,
   },
   sign: {
-    label: "Ký chức danh",
-    description: "Ký số xác nhận thẩm quyền ban hành",
+    label: "Xác nhận ký",
+    description: "Xác nhận thẩm quyền ban hành; hệ thống chưa ký số bằng chứng thư",
     variant: "primary",
     icon: PenLine,
   },
@@ -83,7 +83,7 @@ const ACTION_UI: Record<string, Omit<ActionDef, "action" | "requiresNote">> = {
   },
   "organization-sign": {
     label: "Đóng dấu cơ quan",
-    description: "Ký số tổ chức (dấu cơ quan điện tử) vào văn bản",
+    description: "Xác nhận đóng dấu cơ quan; hệ thống chưa gắn dấu điện tử bằng chứng thư",
     variant: "primary",
     icon: Stamp,
   },

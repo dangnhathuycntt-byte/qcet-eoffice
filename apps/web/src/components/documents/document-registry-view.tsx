@@ -19,7 +19,6 @@ import { useDepartmentList } from "@/hooks/use-department-list";
 import { DocumentQuickView } from "./workspace/document-quick-view";
 import { DocumentQuickEntryModal } from "./document-quick-entry-modal";
 import { ComposeOutgoingDialog } from "./compose-outgoing-dialog";
-import { DigitalSignatureDialog } from "./digital-signature-dialog";
 import { TaskPaginationBar } from "@/components/tasks/table/components/task-pagination-bar";
 
 const PANE_WIDTH_KEY = "qcet_document_pane_width";
@@ -133,8 +132,6 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
   // Modals & Dialogs
   const [isQuickEntryOpen, setIsQuickEntryOpen] = React.useState(false);
   const [isComposeOutgoingOpen, setIsComposeOutgoingOpen] = React.useState(false);
-  const [signatureDoc, setSignatureDoc] = React.useState<OfficialDocument | null>(null);
-  const [isSignatureOpen, setIsSignatureOpen] = React.useState(false);
 
   // Quick View: bố cục theo độ rộng thực của vùng workspace (danh sách + pane)
   const workspaceRef = React.useRef<HTMLDivElement>(null);
@@ -388,10 +385,6 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
         onWorkflowUpdate: () => {
           fetchDocuments();
         },
-        onViewSignature: (item: DocumentItem | null) => {
-          setSignatureDoc(item ? mapApiDocumentToOfficial(item as unknown as ApiDoc) : paneDoc);
-          setIsSignatureOpen(true);
-        },
         focusToken,
       }
     : null;
@@ -534,14 +527,6 @@ export function DocumentRegistryView({ canComposeOutgoing = false }: { canCompos
       <ComposeOutgoingDialog
         open={isComposeOutgoingOpen} onClose={() => setIsComposeOutgoingOpen(false)}
         onCreated={(doc) => { fetchDocuments(); pane.open(doc.id); }}
-      />
-
-      <DigitalSignatureDialog
-        open={isSignatureOpen} onOpenChange={setIsSignatureOpen}
-        documentData={signatureDoc}
-        documentNumber={signatureDoc?.documentNumber || undefined}
-        documentTitle={signatureDoc?.summary}
-        existingSignature={(signatureDoc?.signatures?.[0] as any) || null}
       />
     </div>
   );

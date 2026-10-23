@@ -58,6 +58,7 @@ import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
 import { formatReturnedNote, type OutgoingStepSlug } from "@qcet/shared/domain/documents/outgoing-steps";
 import { listContentReviewers } from "@/server/documents/outgoing-reviewers";
+import { INTERNAL_CONFIRMATION_STATUS, internalConfirmationMetadata } from "@/server/documents/internal-signature";
 import {
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
@@ -1039,13 +1040,9 @@ export class OutgoingDocumentService {
           signerAssignmentId: (user as any).activeAssignmentId || null,
           signingCapacity,
           signatureType: input.signatureType || SignatureType.PERSONAL_DIGITAL,
-          certificateMetadata: (input.certificateMetadata as Prisma.InputJsonValue) || {
-            provider: "Ban Cơ yếu Chính phủ",
-            verifiedAt: now.toISOString(),
-            status: "VALID",
-          },
+          certificateMetadata: internalConfirmationMetadata(input.certificateMetadata),
           signedAt: now,
-          verificationStatus: SignatureVerificationStatus.VALID,
+          verificationStatus: INTERNAL_CONFIRMATION_STATUS,
         },
       });
 
@@ -1292,14 +1289,9 @@ export class OutgoingDocumentService {
           signerAssignmentId: (user as any).activeAssignmentId || null,
           signingCapacity: getOfficialSigningCapacity("VĂN PHÒNG"),
           signatureType: SignatureType.ORGANIZATION_DIGITAL,
-          certificateMetadata: (input.certificateMetadata as Prisma.InputJsonValue) || {
-            organization: INSTITUTION_CONFIG.officialName.toUpperCase(),
-            ca: "Ban Cơ yếu Chính phủ - Cục Chứng thực số và Bảo mật thông tin",
-            signedAt: now.toISOString(),
-            status: "VALID",
-          },
+          certificateMetadata: internalConfirmationMetadata(input.certificateMetadata),
           signedAt: now,
-          verificationStatus: SignatureVerificationStatus.VALID,
+          verificationStatus: INTERNAL_CONFIRMATION_STATUS,
         },
       });
 

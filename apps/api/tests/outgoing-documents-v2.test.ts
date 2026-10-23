@@ -356,7 +356,12 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
       assert.ok(res.signatureRecord);
       assert.equal(res.signatureRecord.signerUserId, rectorUser.id);
       assert.equal(res.signatureRecord.signatureType, SignatureType.PERSONAL_DIGITAL);
-      assert.equal(res.signatureRecord.verificationStatus, SignatureVerificationStatus.VALID);
+      // QCET chưa ký số bằng chứng thư (spec Văn bản G1): xác nhận nội bộ, không VALID; thông tin chứng thư client gửi chỉ là lời khai
+      assert.equal(res.signatureRecord.verificationStatus, SignatureVerificationStatus.UNVERIFIED);
+      const metadata = res.signatureRecord.certificateMetadata as Record<string, any>;
+      assert.equal(metadata.method, "INTERNAL_CONFIRMATION");
+      assert.equal(metadata.claimed?.issuer, "Ban Cơ yếu Chính phủ");
+      assert.equal(metadata.provider, undefined);
       assert.equal(res.signatureRecord.version, 1);
     });
 
@@ -396,7 +401,8 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
       assert.ok(res.signatureRecord);
       assert.equal(res.signatureRecord.signatureType, SignatureType.ORGANIZATION_DIGITAL);
       assert.equal(res.signatureRecord.signerUserId, clerkUser.id);
-      assert.equal(res.signatureRecord.verificationStatus, SignatureVerificationStatus.VALID);
+      assert.equal(res.signatureRecord.verificationStatus, SignatureVerificationStatus.UNVERIFIED);
+      assert.equal((res.signatureRecord.certificateMetadata as Record<string, any>).method, "INTERNAL_CONFIRMATION");
     });
 
     it("Văn thư issues (phát hành) the document", async () => {
@@ -812,7 +818,10 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
 
       assert.equal(signRes.workflow.currentVersion, 2);
       assert.equal(signRes.signatureRecord?.version, 2);
-      assert.equal(signRes.signatureRecord?.verificationStatus, SignatureVerificationStatus.VALID);
+      assert.equal(signRes.signatureRecord?.verificationStatus, SignatureVerificationStatus.UNVERIFIED);
+      // Không tự điền nhà cung cấp CA khi client không gửi chứng thư
+      const unclaimed = signRes.signatureRecord?.certificateMetadata as Record<string, any>;
+      assert.deepEqual(unclaimed, { method: "INTERNAL_CONFIRMATION" });
     });
   });
 

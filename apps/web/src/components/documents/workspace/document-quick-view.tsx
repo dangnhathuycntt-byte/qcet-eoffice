@@ -3,7 +3,7 @@
 import { EmptyState } from "@/components/ui/empty-state";
 import * as React from "react";
 import Link from "next/link";
-import { ChevronLeft, Ellipsis, Link2, Loader2, Paperclip, Pencil, Printer, Stamp, X } from "lucide-react";
+import { ChevronLeft, Ellipsis, Link2, Loader2, Paperclip, Pencil, Printer, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { cn } from "@/lib/utils";
@@ -31,17 +31,15 @@ const PRINT_DETAIL_CSS = `@media print {
 
 /**
  * "Thao tác khác": sửa thông tin và bổ sung tệp (khi server cho phép), in phiếu thông tin văn bản
- * (không phải in tệp PDF đang xem), xem chữ ký số khi có. Header: Đóng bên trái; Sao chép liên kết rồi menu này bên phải.
+ * (không phải in tệp PDF đang xem). Header: Đóng bên trái; Sao chép liên kết rồi menu này bên phải.
  */
 function MoreActionsMenu({
   onPrint,
-  onViewSignature,
   onEdit,
   onAddFiles,
   askAssistantHref,
 }: {
   onPrint: () => void;
-  onViewSignature?: () => void;
   onEdit?: () => void;
   onAddFiles?: () => void;
   /** Có khi cờ Trợ lý bật: đường dẫn mở Trợ lý với văn bản này làm ngữ cảnh. */
@@ -73,9 +71,6 @@ function MoreActionsMenu({
         ) : null}
         {onEdit || onAddFiles ? <MenuSeparator /> : null}
         <MenuActionItem leading={<Printer />} onClick={onPrint}>In phiếu văn bản</MenuActionItem>
-        {onViewSignature ? (
-          <MenuActionItem leading={<Stamp />} onClick={onViewSignature}>Xem chữ ký số</MenuActionItem>
-        ) : null}
       </MenuContent>
     </MenuRoot>
   );
@@ -109,8 +104,6 @@ export interface DocumentQuickViewProps {
   onFileChange: (fileId: string) => void;
   /** Sau thao tác workflow: danh sách cần tải lại. */
   onWorkflowUpdate?: () => void;
-  /** Mở hộp thoại xem chữ ký số (văn bản đã ký). */
-  onViewSignature?: (item: DocumentItem | null) => void;
   /** Tăng để đưa focus về nút Đóng (mở bằng chuột/Enter). */
   focusToken?: number;
 }
@@ -119,7 +112,7 @@ export interface DocumentQuickViewProps {
  * Quick View: chi tiết văn bản dùng chung cho pane không modal (desktop) và overlay (hẹp).
  * Dữ liệu lấy một lần từ `GET /api/documents/[id]` (server quyết định quyền), mọi loại văn bản dùng chung bộ khung.
  */
-export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileChange, onWorkflowUpdate, onViewSignature, focusToken = 0 }: DocumentQuickViewProps) {
+export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileChange, onWorkflowUpdate, focusToken = 0 }: DocumentQuickViewProps) {
   const { state, refresh } = useDocumentDetail(docId);
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const rootRef = React.useRef<HTMLElement>(null);
@@ -248,7 +241,6 @@ export function DocumentQuickView({ docId, fileId, seed, mode, onClose, onFileCh
         <MoreActionsMenu
           askAssistantHref={canAskAssistant ? `/assistant?context=document:${encodeURIComponent(docId)}` : undefined}
           onPrint={() => window.print()}
-          onViewSignature={vm?.hasSignature && onViewSignature ? () => onViewSignature(item) : undefined}
           onEdit={canEdit ? () => setEditing(true) : undefined}
           onAddFiles={canEdit && !upload.busy ? upload.open : undefined}
         />

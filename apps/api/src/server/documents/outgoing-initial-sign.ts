@@ -7,7 +7,8 @@
  * Ký từ xa qua dịch vụ ký số chưa làm: cần chọn nhà cung cấp (ADR-V08).
  */
 import { z } from "zod";
-import { OutgoingDocumentStatus, SignatureType, SignatureVerificationStatus } from "@prisma/client";
+import { OutgoingDocumentStatus, SignatureType } from "@prisma/client";
+import { INTERNAL_CONFIRMATION_STATUS } from "@/server/documents/internal-signature";
 import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
@@ -88,7 +89,7 @@ export async function initialSignOutgoing(session: SessionPayload, documentId: s
         signatureType: SignatureType.INITIAL,
         certificateMetadata: { kind: "INITIAL", ...(note ? { note } : {}) },
         signedAt: now,
-        verificationStatus: SignatureVerificationStatus.VALID,
+        verificationStatus: INTERNAL_CONFIRMATION_STATUS,
       },
     });
     await auditService.logEvent(tx, {
