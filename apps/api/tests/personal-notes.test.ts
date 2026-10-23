@@ -102,6 +102,26 @@ describe('Ghi chú cá nhân', () => {
     await assert.rejects(getPersonalNote(users.me, note.id), /không tồn tại/);
   });
 
+  it('màu nền thẻ: mặc định null, đặt khi tạo hoặc sửa, null đưa về mặc định, giá trị lạ bị từ chối ở hợp đồng', async () => {
+    const plain = await create(users.me, { title: 'Không màu' });
+    assert.equal(plain.color, null);
+    const tinted = await create(users.me, { title: 'Có màu', color: 'coral' });
+    assert.equal(tinted.color, 'coral');
+    assert.equal((await list(users.me)).notes.find((n) => n.id === tinted.id)?.color, 'coral', 'thẻ trong danh sách mang màu');
+
+    const changed = await updatePersonalNote(users.me, plain.id, UpdatePersonalNoteSchema.parse({ color: 'fog' }));
+    assert.equal(changed.color, 'fog');
+    assert.equal(changed.title, 'Không màu', 'đổi màu không đụng trường khác');
+    const cleared = await updatePersonalNote(users.me, plain.id, UpdatePersonalNoteSchema.parse({ color: null }));
+    assert.equal(cleared.color, null);
+    const kept = await updatePersonalNote(users.me, plain.id, UpdatePersonalNoteSchema.parse({ pinned: true }));
+    assert.equal(kept.color, null, 'sửa trường khác không xóa màu');
+
+    assert.equal(UpdatePersonalNoteSchema.safeParse({ color: 'neon' }).success, false);
+    assert.equal(CreatePersonalNoteSchema.safeParse({ color: '#ff0000' }).success, false, 'không nhận mã màu tự do');
+    assert.equal(UpdatePersonalNoteSchema.safeParse({ color: null }).success, true);
+  });
+
   it('riêng tư: người khác không thấy, không sửa, không xóa (404, ghi chú còn nguyên)', async () => {
     const note = await create(users.me, { title: 'Bí mật', content: 'chỉ mình tôi' });
     assert.equal((await list(users.other)).notes.some((n) => n.id === note.id), false);

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import type { PersonalNote, PersonalNoteSummary } from "@qcet/contracts/personal-notes";
+import type { PersonalNote, PersonalNoteColor, PersonalNoteSummary } from "@qcet/contracts/personal-notes";
 import { toNoteCardFields } from "@qcet/shared/domain/notes/note-preview";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -144,25 +144,26 @@ export function NotesView() {
 
   // Mỗi lần gõ: thẻ phía sau hộp sửa và bản nhớ tạm theo kịp chữ đang soạn
   const handleDraft = React.useCallback(
-    (id: string | null, patch: { title?: string; content?: string }) => {
+    (id: string | null, patch: { title?: string; content?: string; color?: PersonalNoteColor | null }) => {
       if (!id) return;
       const cached = cacheRef.current.get(id);
       if (cached) cacheRef.current.set(id, { ...cached, ...patch });
       patchSummary(id, {
         ...(patch.title !== undefined ? { title: patch.title } : {}),
         ...(patch.content !== undefined ? toNoteCardFields(patch.content) : {}),
+        ...(patch.color !== undefined ? { color: patch.color } : {}),
         updatedAt: new Date().toISOString(),
       });
     },
     [patchSummary]
   );
 
-  // Chỉ lấy phần máy chủ quyết định (giờ cập nhật, ghim); chữ đang soạn có thể đã đi trước bản trả về
+  // Chỉ lấy phần máy chủ quyết định (giờ cập nhật, ghim, màu); chữ đang soạn có thể đã đi trước bản trả về
   const handleSaved = React.useCallback(
     (saved: PersonalNote) => {
       const cached = cacheRef.current.get(saved.id);
-      if (cached) cacheRef.current.set(saved.id, { ...cached, pinned: saved.pinned, updatedAt: saved.updatedAt });
-      patchSummary(saved.id, { pinned: saved.pinned, updatedAt: saved.updatedAt });
+      if (cached) cacheRef.current.set(saved.id, { ...cached, pinned: saved.pinned, color: saved.color, updatedAt: saved.updatedAt });
+      patchSummary(saved.id, { pinned: saved.pinned, color: saved.color, updatedAt: saved.updatedAt });
     },
     [patchSummary]
   );

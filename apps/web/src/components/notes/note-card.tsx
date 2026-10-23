@@ -38,7 +38,11 @@ export function NoteCard({
   const actionClass = "absolute opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100";
   const hasText = Boolean(title) || lines.length > 0;
   return (
-    <div className="group relative rounded-lg border border-border bg-card transition-shadow hover:shadow-low">
+    // Thẻ có màu: nền theo `data-note-color` (globals.css), viền trong suốt để thẻ không lệch cỡ so với thẻ trắng
+    <div
+      data-note-color={item.color ?? undefined}
+      className={cn("group relative rounded-lg border transition-shadow hover:shadow-low", item.color ? "border-transparent" : "border-border bg-card")}
+    >
       {/* Chừa 36px dưới cho nút xóa như thanh công cụ của thẻ Keep */}
       <Pressable onClick={onOpen} className="block w-full overflow-hidden rounded-lg pb-9 text-left focus-visible:ring-inset">
         {images.length > 0 && (

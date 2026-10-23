@@ -9,7 +9,9 @@ import {
   PERSONAL_NOTES_PER_USER_MAX,
   type CreatePersonalNoteInput,
   type ListPersonalNotesQuery,
+  PERSONAL_NOTE_COLORS,
   type PersonalNote,
+  type PersonalNoteColor,
   type PersonalNoteEntityType,
   type PersonalNoteSummary,
   type UpdatePersonalNoteInput,
@@ -24,12 +26,17 @@ function entityTypeOf(row: PersonalNoteRow): PersonalNoteEntityType | null {
   return row.entityType === "meeting" || row.entityType === "task" ? row.entityType : null;
 }
 
+function colorOf(row: PersonalNoteRow): PersonalNoteColor | null {
+  return PERSONAL_NOTE_COLORS.find((color) => color === row.color) ?? null;
+}
+
 function toSummary(row: PersonalNoteRow): PersonalNoteSummary {
   return {
     id: row.id,
     title: row.title,
     ...toNoteCardFields(row.content),
     pinned: row.pinned,
+    color: colorOf(row),
     entityType: entityTypeOf(row),
     entityId: row.entityId,
     updatedAt: row.updatedAt.toISOString(),
@@ -42,6 +49,7 @@ function toNote(row: PersonalNoteRow): PersonalNote {
     title: row.title,
     content: row.content,
     pinned: row.pinned,
+    color: colorOf(row),
     entityType: entityTypeOf(row),
     entityId: row.entityId,
     createdAt: row.createdAt.toISOString(),
@@ -108,6 +116,7 @@ export async function createPersonalNote(userId: string, input: CreatePersonalNo
       title: input.title,
       content: input.content,
       pinned: input.pinned,
+      color: input.color ?? null,
       entityType: input.entityType ?? null,
       entityId: input.entityId ?? null,
     },
@@ -122,6 +131,7 @@ export async function updatePersonalNote(userId: string, id: string, input: Upda
   if (input.title !== undefined) data.title = input.title;
   if (input.content !== undefined) data.content = input.content;
   if (input.pinned !== undefined) data.pinned = input.pinned;
+  if (input.color !== undefined) data.color = input.color;
   if (input.entityType !== undefined) {
     data.entityType = input.entityType ?? null;
     data.entityId = input.entityId ?? null;

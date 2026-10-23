@@ -189,6 +189,19 @@ type ElProps = RenderElementProps & {
 export type { ContentBlockItem, ContentBlockType };
 export { isMeaningfulBlock, parseContentToBlocks, serializeBlocksToContent };
 
+/** Loại khối chữ mà `TaskBlockEditorApi.turnInto` được đổi (khối ảnh, bảng, dấu trang... giữ nguyên). */
+const TEXT_BLOCK_TYPES: ReadonlySet<string> = new Set([PT.paragraph, PT.h1, PT.h2, PT.h3, PT.blockquote, PT.callout]);
+
+/** Điều khiển từ ngoài khung soạn (thanh công cụ của ghi chú): hoàn tác, chèn ảnh, đổi loại khối đang đứng. */
+export interface TaskBlockEditorApi {
+  undo: () => void;
+  redo: () => void;
+  /** Chèn tệp (ảnh) sau khối đang đứng, tải lên như thả hoặc dán tệp. */
+  addFiles: (files: FileList | File[]) => void;
+  /** Đổi các khối chữ đang chọn (hoặc khối đang đứng) sang loại khác; khối ảnh, bảng... giữ nguyên. */
+  turnInto: (kind: { type: ContentBlockType; level?: 1 | 2 | 3 }) => void;
+}
+
 export interface TaskBlockEditorProps {
   taskId: string;
   initialDescription?: string | null;
@@ -211,6 +224,10 @@ export interface TaskBlockEditorProps {
   variant?: "page" | "compose";
   /** Nhãn truy cập của vùng soạn (contenteditable). */
   ariaLabel?: string;
+  /** Nhận điều khiển từ ngoài (xem `TaskBlockEditorApi`). */
+  apiRef?: React.Ref<TaskBlockEditorApi>;
+  /** Báo mỗi khi nội dung đổi: còn hoàn tác / làm lại được không (để nút ngoài khung soạn sáng hay mờ). */
+  onHistoryChange?: (state: { canUndo: boolean; canRedo: boolean }) => void;
   /** Đặt con trỏ vào cuối nội dung ngay khi gắn (ô ghi chú vừa mở). */
   autoFocus?: boolean;
   /**
@@ -2291,6 +2308,8 @@ export function TaskBlockEditor({
   className,
   variant = "page",
   ariaLabel,
+  apiRef,
+  onHistoryChange,
   autoFocus = false,
   collab,
 }: TaskBlockEditorProps) {
@@ -2745,6 +2764,44 @@ export function TaskBlockEditor({
     [editor],
   );
 
+  // Điều khiển từ ngoài khung soạn. Đổi loại khối dùng cùng đường với menu "Chuyển thành" (plateToBlocks → blocksToPlate) nên
+  // khối lưu lại đúng như khi đổi bằng tay kéo; chỉ đổi khối chữ, khối ảnh/bảng/dấu trang... giữ nguyên.
+  React.useImperativeHandle(
+    apiRef,
+    () => ({
+      undo: () => editor.undo(),
+      redo: () => editor.redo(),
+      addFiles: (files) => handleProcessDroppedFiles(files),
+      turnInto: (kind) => {
+        if (editor.api.isReadOnly()) return;
+        const at = editor.selection ?? undefined;
+        const entries = at
+          ? (Array.from(editor.api.nodes({ at, match: (_node: any, path: number[]) => path.length === 1 })) as Array<[any, number[]]>)
+          : [];
+        editor.tf.withoutNormalizing(() => {
+          for (let i = entries.length - 1; i >= 0; i--) {
+            const [el, path] = entries[i];
+            if (!TEXT_BLOCK_TYPES.has(el.type)) continue;
+            const block = plateToBlocks([el])[0];
+            const converted: any = { id: block.id, type: kind.type, content: block.content };
+            if (kind.type === "heading") converted.level = kind.level ?? 1;
+            if (kind.type === "checklist") converted.checked = false;
+            const [plateNode] = blocksToPlate([converted]);
+            editor.tf.removeNodes({ at: path });
+            editor.tf.insertNodes([{ ...plateNode, children: el.children }] as any, { at: path });
+          }
+        });
+        editor.tf.focus();
+      },
+    }),
+    [editor, handleProcessDroppedFiles],
+  );
+  const reportHistory = React.useCallback(() => {
+    if (!onHistoryChange) return;
+    const history = (editor as any).history ?? editor;
+    onHistoryChange({ canUndo: (history.undos?.length ?? 0) > 0, canRedo: (history.redos?.length ?? 0) > 0 });
+  }, [editor, onHistoryChange]);
+
   // Menu khối dùng chung cho tay kéo và chuột phải. Khối nằm trong vùng chọn nhiều khối (chọn khối, hoặc bôi đen chữ trải
   // qua nhiều khối) thì menu tác động cả vùng chọn (kiểu Notion), không thì chỉ khối đó; chọn khối ngay khi mở để thấy
   // menu đang tác động lên đâu.
@@ -2843,6 +2900,7 @@ export function TaskBlockEditor({
               editor={editor}
               onValueChange={({ value }) => {
                 if (canEdit) triggerAutoSave(value as PlateValue);
+                reportHistory();
               }}
             >
               <PlateContainer

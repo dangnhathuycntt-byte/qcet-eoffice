@@ -76,6 +76,7 @@ export function toNoteSummary(note: PersonalNote): PersonalNoteSummary {
     title: note.title,
     ...toNoteCardFields(note.content),
     pinned: note.pinned,
+    color: note.color,
     entityType: note.entityType,
     entityId: note.entityId,
     updatedAt: note.updatedAt,

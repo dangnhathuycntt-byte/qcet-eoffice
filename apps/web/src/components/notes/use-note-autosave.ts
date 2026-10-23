@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import type { PersonalNote } from "@qcet/contracts/personal-notes";
+import type { PersonalNote, PersonalNoteColor } from "@qcet/contracts/personal-notes";
 import { NotesRequestError, createNote, updateNote } from "@/components/notes/notes-client";
 
 export type NoteSaveState = "idle" | "dirty" | "saving" | "saved" | "error" | "gone";
@@ -11,6 +11,9 @@ const AUTOSAVE_DELAY_MS = 800;
 interface Draft {
   title: string;
   content: string;
+  /** Chỉ đi kèm lần lưu đầu của ghi chú mới: màu và ghim chọn trước khi gõ (xem `NoteEditor`). */
+  color: PersonalNoteColor | null;
+  pinned: boolean;
 }
 
 interface AutosaveCallbacks {

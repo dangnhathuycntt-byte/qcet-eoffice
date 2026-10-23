@@ -2191,6 +2191,8 @@ model PersonalNote {
   title      String   @default("") @db.VarChar(200)
   content    String   @default("")
   pinned     Boolean  @default(false)
+  /// Màu nền thẻ (khóa trong PERSONAL_NOTE_COLORS của contracts); null là màu mặc định
+  color      String?  @db.VarChar(16)
   entityType String?  @map("entity_type") @db.VarChar(16)
   entityId   String?  @map("entity_id") @db.VarChar(64)
   createdAt  DateTime @default(now()) @map("created_at")
