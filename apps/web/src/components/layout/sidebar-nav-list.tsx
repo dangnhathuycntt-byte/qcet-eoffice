@@ -21,6 +21,7 @@ import {
 import { useSidebar } from "@/components/layout/sidebar-context";
 import { isRouteActive } from "@/lib/navigation/active-matcher";
 import { formatUnreadBadge } from "@/lib/notification-inbox";
+import { useOutgoingAwaitingCount } from "@/lib/documents/work-queue";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Pressable } from "@/components/ui/pressable";
@@ -272,6 +273,7 @@ function NavRowContent({
   compact,
   active,
   count,
+  dot,
 }: {
   item: SidebarNavSubItem;
   isCollapsed: boolean;
@@ -279,11 +281,14 @@ function NavRowContent({
   active: boolean;
   /** Số chưa đọc ở cuối hàng (chỉ Hộp thư của ngăn kéo điện thoại: nút menu có chấm thì mở ra phải thấy số ở đây). */
   count?: string;
+  /** Chấm báo có việc chờ bạn trong mục con đang ẩn (nhóm thu gọn hoặc sidebar chỉ có icon). */
+  dot?: boolean;
 }) {
   const Icon = item.icon;
   return (
     <>
-      <span className={cn("shrink-0 flex items-center justify-center", isCollapsed ? "size-6" : compact ? "size-3.5" : "size-4")}>
+      <span className={cn("relative shrink-0 flex items-center justify-center", isCollapsed ? "size-6" : compact ? "size-3.5" : "size-4")}>
+        {dot && isCollapsed ? <QueueDot className="absolute -right-0.5 -top-0.5" /> : null}
         <Icon
           size={isCollapsed ? 18 : compact ? 14 : 16}
           className={cn(
@@ -299,8 +304,14 @@ function NavRowContent({
           {count}
         </Badge>
       ) : null}
+      {!isCollapsed && dot ? <QueueDot /> : null}
     </>
   );
+}
+
+/** Chấm 6px báo có việc chờ bạn (như chấm của nút Hộp thư): không số, không badge; trạng thái đọc từ aria-label của hàng. */
+function QueueDot({ className }: { className?: string }) {
+  return <span aria-hidden data-slot="queue-dot" className={cn("size-1.5 shrink-0 rounded-full bg-primary", className)} />;
 }
 
 /**
@@ -456,6 +467,7 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
   const { canViewApprovalReport } = useNavContext();
   const unreadCount = Number(badgeCounts?.notifications) || 0;
   const assistantEnabled = useRuntimeFeature("assistant");
+  const outgoingAwaiting = useOutgoingAwaitingCount();
   // Mục theo cờ: ẩn khi cờ tắt (desktop và ngăn kéo điện thoại dùng chung danh sách này)
   const navGroups = SIDEBAR_NAV_GROUPS.map((group) => ({
     ...group,
@@ -536,6 +548,8 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                   }
 
                   const count = item.id === "inbox" ? formatUnreadBadge(unreadCount) : "";
+                  // Mục con "Chờ xử lý" mang chấm; chỉ khi mục con bị ẩn (sidebar thu gọn, nhóm đóng) thì chấm lên mục cha
+                  const queueDot = item.id === "docs-outgoing" && outgoingAwaiting > 0 && (isCollapsed || !isExpanded);
                   return (
                     <React.Fragment key={item.id}>
                     <div className="relative">
@@ -552,10 +566,16 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                             onNavigate?.();
                           }}
                           aria-current={active ? "page" : undefined}
-                          aria-label={count ? `${item.label}, ${unreadCount} thông báo chưa đọc` : item.label}
+                          aria-label={
+                            count
+                              ? `${item.label}, ${unreadCount} thông báo chưa đọc`
+                              : queueDot
+                                ? `${item.label}, có việc chờ bạn`
+                                : item.label
+                          }
                           className={cn(navRowClass({ isCollapsed, compact, active }), !isCollapsed && children && "pr-7")}
                         >
-                          <NavRowContent item={item} isCollapsed={isCollapsed} compact={compact} active={active} count={count} />
+                          <NavRowContent item={item} isCollapsed={isCollapsed} compact={compact} active={active} count={count} dot={queueDot} />
                         </Link>
                       </TooltipTrigger>
                       {isCollapsed && (
@@ -584,12 +604,14 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                       <div className={cn(compact ? "ml-[14px]" : "ml-[15px]", "border-l border-border/60 pl-1.5 space-y-px")}>
                         {children.map((child) => {
                           const childActive = isChildActive(child);
+                          const childDot = child.id === "docs-outgoing-pending" && outgoingAwaiting > 0;
                           return (
                             <Link
                               key={child.id}
                               href={child.href}
                               onClick={onNavigate}
                               aria-current={childActive ? "page" : undefined}
+                              aria-label={childDot ? `${child.label}, có việc chờ bạn` : undefined}
                               className={cn(
                                 "flex items-center gap-2 px-2 h-7 rounded-sm text-compact tracking-tight transition-colors whitespace-nowrap",
                                 childActive
@@ -598,6 +620,7 @@ export function SidebarNavList({ isCollapsed = false, onNavigate, onMaintenance,
                               )}
                             >
                               <span className="truncate flex-1">{child.label}</span>
+                              {childDot ? <QueueDot /> : null}
                             </Link>
                           );
                         })}

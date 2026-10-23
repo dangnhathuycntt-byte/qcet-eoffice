@@ -33,6 +33,14 @@ export const OUTGOING_STEP_ACTIONS: Partial<Record<OutgoingDocumentStatus, Outgo
   NUMBERED: [{ action: "organization-sign", to: "ORGANIZATION_SIGNED" }],
 };
 
+/**
+ * Chức danh giữ bước của văn bản đi ngoài người được chỉ định: Văn thư kiểm thể thức, cấp số, đóng dấu và phát hành;
+ * Hiệu trưởng ký khi chưa chỉ định người ký. Thông báo (`outgoing-notification-handlers`) và hàng đợi "chờ tôi"
+ * (`outgoing-queue`) cùng đọc hai mã này để người được báo luôn là người thấy việc trong hàng đợi.
+ */
+export const OUTGOING_CLERK_POSITION = "VAN_THU";
+export const OUTGOING_SIGNER_POSITION = "HIEU_TRUONG";
+
 /** Tiền tố ghi chú duyệt khi người duyệt trả dự thảo về Nháp; phần sau dấu hai chấm là lý do người trả nhập. */
 export const RETURNED_NOTE_PREFIX = "[Trả lại]";
 

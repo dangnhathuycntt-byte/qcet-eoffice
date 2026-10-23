@@ -39,18 +39,26 @@ export async function notifyUsers(
   const recipients = [...new Set(recipientIds)].filter((id) => id && id !== actorId);
   if (recipients.length === 0) return [];
   const actor = actorId ? await db.user.findUnique({ where: { id: actorId }, select: { name: true } }) : null;
-  await db.notification.createMany({
-    data: recipients.map((userId) => ({
-      userId,
-      actorName: actor?.name || "Hệ thống",
-      title: notice.title,
-      body: notice.body,
-      category: "DOCUMENT_DISPATCH",
-      type: notice.type,
-      linkHref: `/documents?id=${encodeURIComponent(documentId)}`,
-    })),
-  });
-  return recipients;
+  const data = recipients.map((userId) => ({
+    userId,
+    actorName: actor?.name || "Hệ thống",
+    title: notice.title,
+    body: notice.body,
+    category: "DOCUMENT_DISPATCH",
+    type: notice.type,
+    linkHref: `/documents?id=${encodeURIComponent(documentId)}`,
+  }));
+  try {
+    await db.notification.createMany({ data });
+    return recipients;
+  } catch (error) {
+    if ((error as { code?: string }).code !== "P2003") throw error;
+    // Một người nhận bị xóa giữa lúc tính người nhận và lúc ghi: báo những người còn lại thay vì để cả lô lỗi.
+    const alive = new Set((await db.user.findMany({ where: { id: { in: recipients } }, select: { id: true } })).map((u) => u.id));
+    const rest = data.filter((row) => alive.has(row.userId));
+    if (rest.length > 0) await db.notification.createMany({ data: rest });
+    return rest.map((row) => row.userId);
+  }
 }
 
 function docLabel(doc: { registrationNumber: number; documentYear: number; summary: string }): string {

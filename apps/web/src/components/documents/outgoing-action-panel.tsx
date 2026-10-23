@@ -24,6 +24,7 @@ import type { OutgoingDocumentStatus } from "@qcet/contracts/documents";
 import type { OutgoingReturned, OutgoingStepSlug, OutgoingStepView } from "@qcet/contracts/types/document";
 import { OUTGOING_STEP_ACTIONS } from "@qcet/shared/domain/documents/outgoing-steps";
 import { readApiErrorMessage } from "@/lib/documents/api-error";
+import { refreshWorkQueue } from "@/lib/documents/work-queue";
 import { OutgoingSubmitDialog } from "./outgoing-submit-dialog";
 import { formatDateTime } from "@/lib/format";
 
@@ -176,6 +177,7 @@ export function OutgoingActionPanel({
 
       setSuccess(`${actionDef.label} thành công.`);
       onActionSuccess?.();
+      void refreshWorkQueue({ force: true });
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Đã xảy ra lỗi, vui lòng thử lại.");
@@ -275,6 +277,7 @@ export function OutgoingActionPanel({
         onSubmitted={(reviewer) => {
           setSuccess(reviewer ? `Đã gửi ${reviewer.name} duyệt nội dung.` : "Đã gửi duyệt nội dung.");
           onActionSuccess?.();
+          void refreshWorkQueue({ force: true });
           router.refresh();
         }}
       />

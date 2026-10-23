@@ -8,7 +8,11 @@ import { AssignmentStatus, OutgoingDocumentStatus, UserRole } from "@prisma/clie
 import type { OutboxEvent } from "@prisma/client";
 import type { DbClient, OutboxHandlerMap } from "@qcet/db/outbox";
 import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
-import { returnedReasonOf } from "@qcet/shared/domain/documents/outgoing-steps";
+import {
+  OUTGOING_CLERK_POSITION,
+  OUTGOING_SIGNER_POSITION,
+  returnedReasonOf,
+} from "@qcet/shared/domain/documents/outgoing-steps";
 import { notifyUsers, payloadOf, str } from "./document-notification-handlers";
 import { guarded } from "./task-notification-handlers";
 
@@ -25,7 +29,7 @@ async function clerkIds(db: DbClient): Promise<string[]> {
       isActive: true,
       OR: [
         { role: UserRole.VAN_THU },
-        { positionAssignments: { some: { status: AssignmentStatus.ACTIVE, positionDefinition: { code: "VAN_THU" } } } },
+        { positionAssignments: { some: { status: AssignmentStatus.ACTIVE, positionDefinition: { code: OUTGOING_CLERK_POSITION } } } },
       ],
     },
     select: { id: true },
@@ -35,7 +39,7 @@ async function clerkIds(db: DbClient): Promise<string[]> {
 
 async function rectorIds(db: DbClient): Promise<string[]> {
   const rows = await db.positionAssignment.findMany({
-    where: { status: AssignmentStatus.ACTIVE, positionDefinition: { code: "HIEU_TRUONG" }, user: { isActive: true } },
+    where: { status: AssignmentStatus.ACTIVE, positionDefinition: { code: OUTGOING_SIGNER_POSITION }, user: { isActive: true } },
     select: { userId: true },
   });
   return rows.map((r) => r.userId);

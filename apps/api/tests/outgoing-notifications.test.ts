@@ -4,6 +4,7 @@ import { AssignmentStatus, AssignmentType, OutboxStatus, SignatureType, UnitType
 import { prisma } from "@qcet/db/prisma";
 import { OutgoingDocumentService } from "@/server/documents/outgoing-document-service";
 import { runOutboxCycle } from "@/server/outbox/outbox-worker";
+import { notifyUsers } from "@/server/outbox/document-notification-handlers";
 
 /**
  * Thông báo từng bước của văn bản đi (spec Văn bản §8.3, N1): người làm bước kế nhận đúng một thông báo, người vừa thao
@@ -160,5 +161,16 @@ describe("Văn bản đi: thông báo từng bước qua outbox", () => {
     await drain();
     assert.deepEqual(await noticesOf("clerk"), ["outgoing_format_check", "outgoing_number_requested"]);
     assert.deepEqual(await noticesOf("rector"), ["outgoing_sign_requested"], "người ký không nhận báo cho việc của mình");
+  });
+
+  it("một người nhận không còn tồn tại không làm mất thông báo của những người còn lại", async () => {
+    const sent = await notifyUsers(prisma, docId, [people.leader.id, `ghost-${runId}`], null, {
+      type: "outgoing_review_requested",
+      title: "Thử người nhận đã bị xóa",
+      body: "Chỉ người còn tồn tại nhận được",
+    });
+    assert.deepEqual(sent, [people.leader.id]);
+    const titles = (await prisma.notification.findMany({ where: { userId: people.leader.id, linkHref: { contains: docId } } })).map((n) => n.title);
+    assert.ok(titles.includes("Thử người nhận đã bị xóa"));
   });
 });
