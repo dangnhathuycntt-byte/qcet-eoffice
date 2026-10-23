@@ -674,7 +674,7 @@ interface LedgerRowProps {
 }
 
 function LedgerRow({ doc, documents, selected, groupPosition, isOpen, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect, onRowMenu, menuTarget }: LedgerRowProps) {
-  const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
+  const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type, doc.needsRevision);
   const no = numberLabel(doc);
   const urgent = urgencyText(doc);
   const unit = doc.leadDepartment && doc.leadDepartment !== "Chưa phân công" ? doc.leadDepartment : "";

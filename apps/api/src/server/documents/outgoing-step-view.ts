@@ -7,12 +7,16 @@ import { prisma } from "@qcet/db/prisma";
 import type { OutgoingDocumentStatus } from "@prisma/client";
 import type { OutgoingDocumentStatus as ContractStatus } from "@qcet/contracts/documents";
 import type { DocumentItem } from "@qcet/contracts/types/document";
+import { AuditEntityType } from "@qcet/db/audit";
 import {
   describeOutgoingWaiting,
+  isReturnedNote,
   outgoingStepSlugsForState,
+  returnedReasonOf,
   type OutgoingStepSlug,
   type OutgoingStepView,
 } from "@qcet/shared/domain/documents/outgoing-steps";
+import type { OutgoingReturned } from "@qcet/contracts/types/document";
 import { authorize } from "@/server/authorization/hybrid-authorization";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { ForbiddenError } from "@/server/api/errors";
@@ -25,12 +29,26 @@ interface WorkflowRow {
   formatReviewerId: string | null;
   authorizedSignerId: string | null;
   draftingUnitId: string | null;
+  contentReviewNotes: string | null;
   contentReviewSubmittedAt: Date | null;
   formatReviewSubmittedAt: Date | null;
   formatApprovedAt: Date | null;
   authorizedSignedAt: Date | null;
   numberedAt: Date | null;
   orgSignedAt: Date | null;
+}
+
+/** Ai trả dự thảo về Nháp và khi nào: lấy từ nhật ký của lần trả gần nhất (workflow chỉ giữ ghi chú). */
+async function loadReturned(documentId: string, notes: string | null): Promise<OutgoingReturned> {
+  const event = await prisma.auditEvent.findFirst({
+    where: { entityType: AuditEntityType.DOCUMENT, entityId: documentId, action: "DOCUMENT_CONTENT_REJECTED" },
+    orderBy: { createdAt: "desc" },
+    select: { actorId: true, createdAt: true },
+  });
+  const actor = event?.actorId
+    ? await prisma.user.findUnique({ where: { id: event.actorId }, select: { name: true } })
+    : null;
+  return { by: actor?.name ?? null, at: event?.createdAt.toISOString() ?? null, note: returnedReasonOf(notes) };
 }
 
 export async function buildOutgoingStepView(
@@ -78,8 +96,14 @@ export async function buildOutgoingStepView(
       )
     : new Map<string, string>();
 
+  const returned =
+    workflow.status === "DRAFT" && isReturnedNote(workflow.contentReviewNotes)
+      ? await loadReturned(document.id, workflow.contentReviewNotes)
+      : null;
+
   return {
     actions,
+    returned,
     waiting: describeOutgoingWaiting({
       ...workflow,
       status: workflow.status as ContractStatus,

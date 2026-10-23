@@ -37,6 +37,7 @@ import {
 import { logAuditEvent } from "@qcet/db/audit";
 import type { UpdateDocumentInput } from "@qcet/contracts/documents";
 import type { DocumentTypeCode } from "@qcet/shared/domain/documents/document-type-param";
+import { isReturnedNote } from "@qcet/shared/domain/documents/outgoing-steps";
 
 export {
   buildDocumentReadWhere,
@@ -267,6 +268,10 @@ export function mapPrismaDocumentToItem(rawRecord: any): DocumentItem {
 
     incomingWorkflow: record.incomingWorkflow || null,
     outgoingWorkflow: record.outgoingWorkflow || null,
+    needsRevision:
+      record.type === "VAN_BAN_DI" &&
+      record.outgoingWorkflow?.status === "DRAFT" &&
+      isReturnedNote(record.outgoingWorkflow?.contentReviewNotes),
     outgoingRecipients: record.outgoingRecipients || [],
     signatures: record.signatures || [],
     linkedTaskId: record.linkedTaskId || null,
@@ -532,7 +537,7 @@ export async function updateDocument(
   const existing = await db.document.findUnique({
     where: { id },
     include: {
-      signatures: { select: { id: true }, take: 1 },
+      signatures: { select: { id: true, signatureType: true, verificationStatus: true } },
       outgoingWorkflow: { select: { status: true, authorizedSignedAt: true } },
       incomingWorkflow: { select: { id: true, status: true } },
     },

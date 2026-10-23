@@ -38,7 +38,7 @@ interface ApiDoc {
   registrationNumber?: number | null; documentYear?: number | null;
   issuedDate?: string | Date | null; registeredDate?: string | Date | null; receivedDate?: string | null;
   issuingAuthority?: string | null; signatory?: string | null; signerName?: string | null; signerTitle?: string | null;
-  summary?: string | null; workflowStatus?: string | null; dueDate?: string | Date | null; leadUnitName?: string | null; leadDepartment?: string | null; leadDepartmentName?: string | null; draftingDeptName?: string | null;
+  summary?: string | null; workflowStatus?: string | null; needsRevision?: boolean; dueDate?: string | Date | null; leadUnitName?: string | null; leadDepartment?: string | null; leadDepartmentName?: string | null; draftingDeptName?: string | null;
   linkedTaskId?: string | null;
   linkedTask?: { id: string; code?: string; title: string; status: string; progressPercent: number; dueDate?: string | null } | null;
   signatures?: Array<unknown> | null;
@@ -72,6 +72,7 @@ function mapApiDocumentToOfficial(item: ApiDoc): OfficialDocument {
     documentYear: item.documentYear ?? undefined,
     dueDate: formatDate(item.dueDate) || undefined,
     workflowStatus: item.workflowStatus || undefined,
+    needsRevision: item.needsRevision || undefined,
     issuedDate: formatDate(item.issuedDate),
     receivedDate: formatDate(item.registeredDate) || item.receivedDate || undefined,
     issuingAuthority: item.issuingAuthority || "",

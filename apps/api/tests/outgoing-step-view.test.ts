@@ -151,6 +151,6 @@ describe("Văn bản đi: thao tác theo người xem (outgoingStep)", () => {
   it("Bước đã qua không còn chờ ai (ISSUED)", async () => {
     await setWorkflow({ status: OutgoingDocumentStatus.ISSUED, issuedAt: new Date() });
     const result = await view("clerk");
-    assert.deepEqual(result, { actions: [], waiting: null });
+    assert.deepEqual(result, { actions: [], waiting: null, returned: null });
   });
 });

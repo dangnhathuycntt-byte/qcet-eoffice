@@ -32,14 +32,19 @@ export async function evaluateInitialSign(
   ctx: AuthorizationContext,
   userId: string,
   doc: { id: string; securityLevel: string; status: string; registeredById: string },
-  wf: { status: OutgoingDocumentStatus; currentVersion: number; authorizedSignedAt: Date | null }
+  wf: { status: OutgoingDocumentStatus; currentVersion: number; authorizedSignedAt: Date | null; draftingUnitId?: string | null }
 ): Promise<{ allowed: true } | { allowed: false; code: "FORBIDDEN" | "INITIAL_SIGN_NOT_ALLOWED" | "INITIAL_SIGN_DUPLICATE"; message: string }> {
-  const drafterUnit = await prisma.positionAssignment.findFirst({
-    where: { userId: doc.registeredById, status: "ACTIVE" },
-    orderBy: { effectiveFrom: "desc" },
-    select: { unitId: true },
-  });
-  const resource = { ...submissionResource(doc), ...(drafterUnit ? { draftingUnitId: drafterUnit.unitId } : {}) };
+  // Đơn vị soạn ghi trên văn bản; dự thảo cũ chưa có thì lấy theo chức vụ hiện tại của người soạn.
+  const draftingUnitId =
+    wf.draftingUnitId ??
+    (
+      await prisma.positionAssignment.findFirst({
+        where: { userId: doc.registeredById, status: "ACTIVE" },
+        orderBy: { effectiveFrom: "desc" },
+        select: { unitId: true },
+      })
+    )?.unitId;
+  const resource = { ...submissionResource(doc), ...(draftingUnitId ? { draftingUnitId } : {}) };
   const decision = authorize(ctx, "document.outgoing.initial_sign", resource);
   if (!decision.allowed || doc.registeredById === userId) {
     return { allowed: false, code: "FORBIDDEN", message: decision.reason || "Bạn không có quyền ký nháy văn bản này" };

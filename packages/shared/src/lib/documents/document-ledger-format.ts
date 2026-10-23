@@ -102,10 +102,15 @@ const OUTGOING_STEPS: Record<string, Step> = {
 export function getLedgerStepLabel(
   status: DocumentStatus,
   workflowStatus?: string,
-  type?: string
+  type?: string,
+  needsRevision?: boolean
 ): Step {
   if (workflowStatus) {
     const isOutgoing = type === "outbox" || type === "VAN_BAN_DI";
+    // Dự thảo bị người duyệt trả lại: người soạn phải sửa rồi trình lại, không phải bản nháp mới
+    if (isOutgoing && workflowStatus === "DRAFT" && needsRevision) {
+      return { label: "Cần sửa", tone: "warning", kind: "new" };
+    }
     const hit = (isOutgoing ? OUTGOING_STEPS : INCOMING_STEPS)[workflowStatus];
     if (hit) return hit;
   }

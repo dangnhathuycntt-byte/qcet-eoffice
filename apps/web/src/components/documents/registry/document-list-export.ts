@@ -19,7 +19,7 @@ export function documentCsvRows(docs: OfficialDocument[], numberHeader: string):
         urgency ? capitalize(urgency.label) : "Thường",
         doc.leadDepartment && doc.leadDepartment !== "Chưa phân công" ? doc.leadDepartment : "",
         formatLedgerDate(doc.dueDate),
-        getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type).label,
+        getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type, doc.needsRevision).label,
       ];
     }),
   ];

@@ -20,7 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/ui/form-field";
 import { StandardDialog } from "@/components/ui/dialog";
 import type { OutgoingDocumentStatus } from "@qcet/contracts/documents";
-import type { OutgoingStepSlug, OutgoingStepView } from "@qcet/contracts/types/document";
+import type { OutgoingReturned, OutgoingStepSlug, OutgoingStepView } from "@qcet/contracts/types/document";
 import { OUTGOING_STEP_ACTIONS } from "@qcet/shared/domain/documents/outgoing-steps";
 import { readApiErrorMessage } from "@/lib/documents/api-error";
 import { formatDateTime } from "@/lib/format";
@@ -92,6 +92,23 @@ function actionDef(slug: OutgoingStepSlug): ActionDef {
   return { ...ACTION_UI[slug], action: slug, requiresNote: NOTE_REQUIRED.has(slug) };
 }
 
+/** Dự thảo bị người duyệt trả lại: ai trả, khi nào và lý do, ngay đầu khối thao tác để người soạn biết cần sửa gì. */
+function ReturnedNotice({ returned }: { returned: OutgoingReturned }) {
+  const meta = [returned.by, returned.at ? formatDateTime(returned.at) : null].filter(Boolean).join(" · ");
+  return (
+    <div role="note" className="rounded-sm bg-warning/10 px-3 py-2 text-compact">
+      <p className="flex flex-wrap items-center gap-x-1.5 font-medium text-warning">
+        <RotateCcw className="size-4 shrink-0" aria-hidden />
+        Bị trả lại để sửa
+        {meta ? <span className="font-normal tabular-nums text-muted-foreground">· {meta}</span> : null}
+      </p>
+      <p className="mt-1 whitespace-pre-wrap break-words text-body-foreground">
+        {returned.note ?? "Người duyệt không ghi lý do."}
+      </p>
+    </div>
+  );
+}
+
 export interface OutgoingActionPanelProps {
   documentId: string;
   status: OutgoingDocumentStatus;
@@ -117,6 +134,7 @@ export function OutgoingActionPanel({
 
   const actions = (step?.actions ?? []).map(actionDef);
   const waiting = step?.waiting ?? null;
+  const notice = step?.returned ? <ReturnedNotice returned={step.returned} /> : null;
 
   async function executeAction(actionDef: ActionDef, noteValue?: string) {
     setPending(actionDef.action);
@@ -161,13 +179,16 @@ export function OutgoingActionPanel({
     // Chưa đến lượt người xem: nói ai đang giữ bước thay vì hiện nút sẽ bị từ chối
     if (waiting) {
       return (
-        <p className={cn("flex items-center gap-1.5 text-compact text-muted-foreground", className)}>
-          <Clock className="size-4 shrink-0" aria-hidden />
-          <span>
-            Đang chờ <span className="font-medium text-foreground">{waiting.who}</span> {waiting.task}
-            {waiting.since ? <span className="tabular-nums"> · từ {formatDateTime(waiting.since)}</span> : null}
-          </span>
-        </p>
+        <div className={cn("space-y-2", className)}>
+          {notice}
+          <p className="flex items-center gap-1.5 text-compact text-muted-foreground">
+            <Clock className="size-4 shrink-0" aria-hidden />
+            <span>
+              Đang chờ <span className="font-medium text-foreground">{waiting.who}</span> {waiting.task}
+              {waiting.since ? <span className="tabular-nums"> · từ {formatDateTime(waiting.since)}</span> : null}
+            </span>
+          </p>
+        </div>
       );
     }
     if (status === "ISSUED") {
@@ -178,12 +199,13 @@ export function OutgoingActionPanel({
         </p>
       );
     }
-    return null;
+    return notice ? <div className={className}>{notice}</div> : null;
   }
 
   return (
     <div className={cn("rounded-lg border border-border bg-card p-3", className)}>
       <h3 className="text-xs font-semibold text-muted-foreground mb-2">Hành động</h3>
+      {notice ? <div className="mb-2">{notice}</div> : null}
 
       <div className="flex flex-wrap items-center gap-1.5">
         {actions.map((actionDef) => {

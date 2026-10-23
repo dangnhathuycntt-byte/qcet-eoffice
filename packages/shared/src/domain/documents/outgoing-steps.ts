@@ -31,6 +31,27 @@ export const OUTGOING_STEP_ACTIONS: Partial<Record<OutgoingDocumentStatus, Outgo
   NUMBERED: [{ action: "organization-sign", to: "ORGANIZATION_SIGNED" }],
 };
 
+/** Tiền tố ghi chú duyệt khi người duyệt trả dự thảo về Nháp; phần sau dấu hai chấm là lý do người trả nhập. */
+export const RETURNED_NOTE_PREFIX = "[Trả lại]";
+
+/** Ghi chú duyệt nội dung của dự thảo bị trả lại; `note` trống thì chỉ có tiền tố. */
+export function formatReturnedNote(note?: string | null): string {
+  const reason = note?.trim();
+  return reason ? `${RETURNED_NOTE_PREFIX}: ${reason}` : RETURNED_NOTE_PREFIX;
+}
+
+/** Ghi chú duyệt có phải do người duyệt trả lại không (kể cả bản ghi cũ ghi "[Trả lại soạn thảo …]"). */
+export function isReturnedNote(notes: string | null | undefined): boolean {
+  return Boolean(notes?.startsWith("[Trả lại"));
+}
+
+/** Lý do người trả nhập, null khi không có (bản ghi cũ dùng câu mặc định thay cho lý do). */
+export function returnedReasonOf(notes: string | null | undefined): string | null {
+  if (!isReturnedNote(notes)) return null;
+  const match = /^\[Trả lại\]:\s*([\s\S]+)$/.exec(notes ?? "");
+  return match ? match[1].trim() || null : null;
+}
+
 /**
  * Thao tác của bước đang chờ. Ký chức danh không đổi trạng thái nên AUTHORIZED_SIGN gồm hai bước liên tiếp:
  * chờ ký (`authorizedSignedAt` trống), rồi chờ cấp số; chỉ hiện thao tác của đúng bước.

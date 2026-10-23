@@ -56,7 +56,7 @@ import {
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@qcet/shared/config/institution";
 import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
-import type { OutgoingStepSlug } from "@qcet/shared/domain/documents/outgoing-steps";
+import { formatReturnedNote, type OutgoingStepSlug } from "@qcet/shared/domain/documents/outgoing-steps";
 import {
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
@@ -682,9 +682,7 @@ export class OutgoingDocumentService {
         where: { documentId: input.documentId },
         data: {
           status: OutgoingDocumentStatus.DRAFT,
-          contentReviewNotes: input.notes
-            ? `[Trả lại]: ${input.notes}`
-            : "[Trả lại soạn thảo để chỉnh sửa nội dung]",
+          contentReviewNotes: formatReturnedNote(input.notes),
           contentReviewSubmittedAt: null,
         },
       });

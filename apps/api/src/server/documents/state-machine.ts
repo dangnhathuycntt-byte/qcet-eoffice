@@ -356,6 +356,7 @@ export function mapOutgoingWorkflowStatusToDocumentStatus(
 export interface DocumentImmutabilityTarget {
   status?: DocumentStatus | string | null;
   signerName?: string | null;
+  /** Bản ghi chữ ký; chỉ chữ ký còn hiệu lực (không phải ký nháy, không bị thu hồi) mới khóa văn bản. */
   signatures?: Array<unknown> | null;
   incomingWorkflow?: {
     status?: IncomingDocumentStatus | string | null;
@@ -364,6 +365,11 @@ export interface DocumentImmutabilityTarget {
     status?: OutgoingDocumentStatus | string | null;
     authorizedSignedAt?: Date | string | null;
   } | null;
+}
+
+function isEffectiveSignature(signature: unknown): boolean {
+  const { signatureType, verificationStatus } = (signature ?? {}) as { signatureType?: string; verificationStatus?: string };
+  return signatureType !== "INITIAL" && verificationStatus !== "REVOKED";
 }
 
 /**
@@ -390,8 +396,9 @@ export function isDocumentImmutable(doc: DocumentImmutabilityTarget): boolean {
     return true;
   }
 
-  // 2. Contains digital signature records
-  if (Array.isArray(doc.signatures) && doc.signatures.length > 0) {
+  // 2. Contains effective digital signature records. Ký nháy (INITIAL) chỉ là xác nhận nháp và bản ghi REVOKED đã vô
+  // hiệu, nên không khóa dự thảo: dự thảo bị trả lại sau khi lãnh đạo ký nháy vẫn sửa được.
+  if (Array.isArray(doc.signatures) && doc.signatures.some(isEffectiveSignature)) {
     return true;
   }
 

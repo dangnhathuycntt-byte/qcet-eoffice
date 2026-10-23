@@ -3,8 +3,12 @@ import assert from 'node:assert/strict';
 import {
   OUTGOING_STEP_ACTIONS,
   describeOutgoingWaiting,
+  formatReturnedNote,
+  isReturnedNote,
   outgoingStepSlugsForState,
+  returnedReasonOf,
 } from '@qcet/shared/domain/documents/outgoing-steps';
+import { getLedgerStepLabel } from '@qcet/shared/lib/documents/document-ledger-format';
 import { OUTGOING_DOCUMENT_TRANSITIONS } from '../apps/api/src/server/documents/state-machine';
 import type { OutgoingDocumentStatus } from '@qcet/contracts/documents';
 
@@ -53,5 +57,25 @@ describe('bước đang chờ của văn bản đi', () => {
     assert.equal(describeOutgoingWaiting({ status: 'ORGANIZATION_SIGNED' })?.task, 'phát hành');
     assert.equal(describeOutgoingWaiting({ status: 'DRAFT' }), null);
     assert.equal(describeOutgoingWaiting({ status: 'ISSUED' }), null);
+  });
+});
+
+describe('dự thảo bị trả lại', () => {
+  it('ghi chú trả lại ghi và đọc ngược được, kể cả bản ghi cũ dùng câu mặc định', () => {
+    assert.equal(formatReturnedNote('Cần bổ sung căn cứ'), '[Trả lại]: Cần bổ sung căn cứ');
+    assert.equal(formatReturnedNote('  '), '[Trả lại]');
+    assert.equal(returnedReasonOf('[Trả lại]: Cần bổ sung căn cứ'), 'Cần bổ sung căn cứ');
+    assert.equal(returnedReasonOf('[Trả lại]'), null);
+    assert.equal(returnedReasonOf('[Trả lại soạn thảo để chỉnh sửa nội dung]'), null, 'câu mặc định cũ không phải lý do');
+    assert.equal(isReturnedNote('[Trả lại soạn thảo để chỉnh sửa nội dung]'), true);
+    assert.equal(isReturnedNote('Nội dung đạt'), false);
+    assert.equal(isReturnedNote(null), false);
+  });
+
+  it('chip "Cần sửa" chỉ cho dự thảo văn bản đi đã bị trả lại; nháp mới vẫn là "Nháp"', () => {
+    assert.equal(getLedgerStepLabel('CHO_PHAN_CONG', 'DRAFT', 'VAN_BAN_DI', true).label, 'Cần sửa');
+    assert.equal(getLedgerStepLabel('CHO_PHAN_CONG', 'DRAFT', 'VAN_BAN_DI', false).label, 'Nháp');
+    assert.equal(getLedgerStepLabel('CHO_PHAN_CONG', 'DRAFT', 'VAN_BAN_DI').label, 'Nháp');
+    assert.equal(getLedgerStepLabel('CHO_PHAN_CONG', 'CONTENT_REVIEW', 'VAN_BAN_DI', true).label, 'Chờ duyệt', 'đã trình lại thì hết Cần sửa');
   });
 });

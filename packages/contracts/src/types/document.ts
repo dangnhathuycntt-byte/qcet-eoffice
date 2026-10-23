@@ -86,10 +86,19 @@ export interface OutgoingWaiting {
   since: string | null;
 }
 
+/** Lần trả lại gần nhất của dự thảo đang ở Nháp: ai trả, khi nào, lý do (null khi người trả không ghi lý do). */
+export interface OutgoingReturned {
+  by: string | null;
+  at: string | null;
+  note: string | null;
+}
+
 /** Thao tác người xem được làm lúc này và việc đang chờ; server tính cho từng người xem. */
 export interface OutgoingStepView {
   actions: OutgoingStepSlug[];
   waiting: OutgoingWaiting | null;
+  /** Dự thảo bị trả lại để sửa (đang ở Nháp sau khi người duyệt trả); null ở mọi trường hợp khác. */
+  returned: OutgoingReturned | null;
 }
 
 export interface DocumentItem {
@@ -137,6 +146,8 @@ export interface DocumentItem {
   outgoingWorkflow?: any;
   /** Văn bản đi: thao tác của bước đang chờ mà người xem được làm và ai đang giữ bước; server tính theo người xem. */
   outgoingStep?: OutgoingStepView | null;
+  /** Dự thảo văn bản đi đã bị người duyệt trả lại và chưa trình lại (chip "Cần sửa"). */
+  needsRevision?: boolean;
   /** Nơi nhận có định danh của văn bản đi; đơn vị trong trường đọc được văn bản từ lúc phát hành (ADR-015). */
   outgoingRecipients?: Array<{ kind: string; unitId: string | null }>;
   signatures?: any[];
@@ -165,6 +176,7 @@ export interface OfficialDocument {
   documentYear?: number;        // Năm của sổ
   dueDate?: string;             // Hạn xử lý (YYYY-MM-DD)
   workflowStatus?: string;      // Trạng thái workflow chi tiết (xem bản đồ hệ thống: Quy trình 6/7)
+  needsRevision?: boolean;      // Dự thảo văn bản đi bị trả lại, chưa trình lại
   issuedDate: string;           // Ngày ban hành (YYYY-MM-DD)
   receivedDate?: string;        // Ngày tiếp nhận vào sổ (YYYY-MM-DD)
   issuingAuthority: string;     // Cơ quan / Đơn vị ban hành
