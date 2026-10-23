@@ -48,6 +48,11 @@ import {
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
+import {
+  isDeputyUnitLeaderPosition,
+  isExecutivePosition,
+  isUnitLeaderPosition,
+} from "@/server/authorization/authorization-engine";
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@qcet/shared/config/institution";
 import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
@@ -182,6 +187,54 @@ export interface OutgoingWorkflowWithDetails extends DocumentOutgoingWorkflow {
 // Service Implementation
 // ============================================================================
 
+/**
+ * Đơn vị soạn của dự thảo: `draftingDeptId` nếu chính là đơn vị người soạn đang giữ chức danh, rồi đơn vị đang làm
+ * việc trong phiên, rồi đơn vị chính. Không nhận đơn vị người soạn không thuộc về, kẻo trưởng đơn vị khác đọc được dự thảo.
+ */
+async function resolveDraftingUnitId(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  requestedUnitId: string | undefined,
+  activeUnitId: string | undefined
+): Promise<string | null> {
+  const assignments = await tx.positionAssignment.findMany({
+    where: { userId, status: "ACTIVE" },
+    select: { unitId: true, type: true },
+    orderBy: { effectiveFrom: "asc" },
+  });
+  const unitIds = new Set(assignments.map((a) => a.unitId));
+  if (requestedUnitId && unitIds.has(requestedUnitId)) return requestedUnitId;
+  if (activeUnitId) return activeUnitId;
+  return assignments.find((a) => a.type === "PRIMARY")?.unitId ?? assignments[0]?.unitId ?? null;
+}
+
+/**
+ * Duyệt hoặc trả lại nội dung dự thảo chỉ thuộc về người được trình, trưởng/phó đơn vị soạn hoặc lãnh đạo trường.
+ * Quyền theo chức danh (`assertAuthorized`) không xét đơn vị, nên thiếu bước này thì trưởng đơn vị khác duyệt được
+ * dự thảo không phải của mình. Dự thảo cũ chưa có đơn vị soạn và chưa chỉ định người duyệt giữ nguyên hành vi cũ.
+ */
+async function assertContentReviewScope(
+  userId: string,
+  workflow: { contentReviewerId: string | null; draftingUnitId: string | null }
+): Promise<void> {
+  if (workflow.contentReviewerId === userId) return;
+  if (!workflow.contentReviewerId && !workflow.draftingUnitId) return;
+  const assignments = await prisma.positionAssignment.findMany({
+    where: { userId, status: "ACTIVE" },
+    select: { unitId: true, positionDefinition: { select: { code: true } } },
+  });
+  const allowed = assignments.some((a) => {
+    const code = a.positionDefinition.code;
+    if (isExecutivePosition(code)) return true;
+    return (
+      a.unitId === workflow.draftingUnitId && (isUnitLeaderPosition(code) || isDeputyUnitLeaderPosition(code))
+    );
+  });
+  if (!allowed) {
+    throw new ForbiddenError("Chỉ người được trình duyệt hoặc trưởng/phó đơn vị soạn mới duyệt nội dung dự thảo này.");
+  }
+}
+
 export class OutgoingDocumentService {
   /**
    * Helper to verify that a signed document cannot be modified directly.
@@ -284,12 +337,14 @@ export class OutgoingDocumentService {
       }
 
       // 2. Create Outgoing Workflow record
+      const draftingUnitId = await resolveDraftingUnitId(tx, user.id, input.draftingDeptId, user.departmentId);
       const workflow = await tx.documentOutgoingWorkflow.create({
         data: {
           documentId: document.id,
           status: OutgoingDocumentStatus.DRAFT,
           currentVersion: 1,
           authorizedSignerId: input.authorizedSignerId,
+          draftingUnitId,
         },
       });
 
@@ -449,6 +504,7 @@ export class OutgoingDocumentService {
       existing.document.registeredById,
       user.id
     );
+    await assertContentReviewScope(user.id, existing);
 
     const resource: AuthorizationResource = {
       id: input.documentId,
@@ -543,6 +599,7 @@ export class OutgoingDocumentService {
       existing.document.registeredById,
       user.id
     );
+    await assertContentReviewScope(user.id, existing);
 
     const resource: AuthorizationResource = {
       id: input.documentId,

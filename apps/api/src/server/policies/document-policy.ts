@@ -25,7 +25,7 @@ import {
   type DocumentClassificationTarget,
 } from '@/server/authorization/document-classification';
 import { isDocumentImmutable } from '@/server/documents/state-machine';
-import { isUnitLeaderPosition } from '@/server/authorization/authorization-engine';
+import { isDeputyUnitLeaderPosition, isUnitLeaderPosition } from '@/server/authorization/authorization-engine';
 import { DELIVERED_OUTGOING_STATUSES } from '@qcet/shared/domain/documents/delivery-rules';
 
 export interface DocumentEntity extends DocumentClassificationTarget {
@@ -315,7 +315,21 @@ export function buildDocumentReadWhere(
         },
       },
     },
+    // Văn bản đi: người được trình duyệt nội dung, kiểm tra thể thức hoặc ký thay mặt (khớp `hasDirectDocumentRelationship`).
+    {
+      outgoingWorkflow: {
+        is: { OR: [{ contentReviewerId: userId }, { formatReviewerId: userId }, { authorizedSignerId: userId }] },
+      },
+    },
   ];
+
+  // Trưởng/phó đơn vị soạn đọc dự thảo văn bản đi của nhân viên mình (khớp `isLeaderOfDraftingUnit`), không phải mọi thành viên.
+  const draftingLeaderUnitIds = (((userOrContext as any)?.positions ?? []) as Array<{ positionCode: string; unitId: string }>)
+    .filter((p) => isUnitLeaderPosition(p.positionCode) || isDeputyUnitLeaderPosition(p.positionCode))
+    .map((p) => p.unitId);
+  if (draftingLeaderUnitIds.length > 0) {
+    orConditions.push({ outgoingWorkflow: { is: { draftingUnitId: { in: draftingLeaderUnitIds } } } });
+  }
 
   // Trưởng đơn vị đọc được tờ trình có bước duyệt thuộc đơn vị mình phụ trách (không phải mọi thành viên đơn vị).
   const headedUnitIds = (((userOrContext as any)?.positions ?? []) as Array<{ positionCode: string; unitId: string }>)

@@ -2,7 +2,7 @@
  * Kiểm quyền truy cập tệp theo tài nguyên sở hữu (tệp đính kèm văn bản, sản phẩm nhiệm vụ)
  * trước khi route stream tệp.
  */
-import { FileScanStatus } from "@prisma/client";
+import { FileScanStatus, type Prisma } from "@prisma/client";
 import { prisma } from "@qcet/db/prisma";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { ConflictError, ForbiddenError, NotFoundError } from "@/server/api/errors";
@@ -10,22 +10,61 @@ import { canReadDocument } from "@/server/policies/document-policy";
 import { canReadDossierItem } from "@/server/policies/dossier-policy";
 import { canViewMeeting } from "@/server/policies/meeting-policy";
 import { loadAuthorizationContext } from "@/server/authorization/authorization-context-service";
+import { isUnitLeaderPosition } from "@/server/authorization/authorization-engine";
+import { isApprovalParticipant } from "@/server/documents/submission-approval-service";
 import { buildTaskReadWhere } from "@/server/tasks/task-query-service";
 import { logger } from "@/server/observability/logger";
 import { retentionCutoff } from "@qcet/shared/domain/assistant/assistant-history";
+
+/**
+ * Văn bản nạp kèm để tính quyền đọc: đơn vị xử lý (workflow, chỉ đạo, nhiệm vụ liên kết), nơi nhận và người được chỉ định
+ * của văn bản đi (người duyệt, người ký, đơn vị soạn). Thiếu phần nào thì quy tắc theo phần đó luôn từ chối.
+ */
+const DOCUMENT_ACCESS_INCLUDE = {
+  directives: true,
+  incomingWorkflow: { include: { unitAssignments: true } },
+  linkedTask: { select: { leadUnitId: true } },
+  outgoingWorkflow: {
+    select: {
+      status: true,
+      contentReviewerId: true,
+      formatReviewerId: true,
+      authorizedSignerId: true,
+      draftingUnitId: true,
+    },
+  },
+  outgoingRecipients: { select: { kind: true, unitId: true } },
+} satisfies Prisma.DocumentInclude;
+
+/**
+ * Quyền đọc tệp của một văn bản: cùng kết quả với mở chi tiết văn bản. Dùng ngữ cảnh phân quyền đầy đủ (chức danh,
+ * đơn vị, kiêm nhiệm) nạp mới để phân công vừa hết hạn không còn cấp quyền; giữ thêm cổng theo `authUser` để không mất
+ * quyền của tài khoản chỉ có vai trò (văn thư chưa có phân công). Người tham gia luồng duyệt tờ trình đọc được tờ trình
+ * nên mở được tệp của nó (như `readDocumentForUser`).
+ */
+async function canReadDocumentFile(
+  authUser: AuthenticatedUser,
+  document: Parameters<typeof canReadDocument>[1] & { id: string; type: string }
+): Promise<boolean> {
+  const authContext = await loadAuthorizationContext(authUser.id, new Date());
+  if (canReadDocument(authContext, document) || canReadDocument(authUser, document)) return true;
+  if (document.type !== "TO_TRINH_NOI_BO") return false;
+  const headedUnitIds = authContext.positions.filter((p) => isUnitLeaderPosition(p.positionCode)).map((p) => p.unitId);
+  return isApprovalParticipant(authUser.id, headedUnitIds, document.id);
+}
 
 /** Tệp đính kèm văn bản (kèm văn bản) mà người dùng được đọc; 404 khi không có, 403 khi không có quyền. */
 export async function getReadableAttachmentForDownload(authUser: AuthenticatedUser, attachmentId: string) {
   const attachment = await prisma.documentAttachment.findUnique({
     where: { id: attachmentId },
-    include: { document: true },
+    include: { document: { include: DOCUMENT_ACCESS_INCLUDE } },
   });
 
   if (!attachment) {
     throw new NotFoundError("Không tìm thấy tệp đính kèm");
   }
 
-  if (!canReadDocument(authUser, attachment.document)) {
+  if (!(await canReadDocumentFile(authUser, attachment.document))) {
     throw new ForbiddenError(
       "Bạn không có quyền truy cập tệp đính kèm của văn bản này"
     );
@@ -57,11 +96,11 @@ export async function assertFilePathDownloadAllowed(
         `api/files/${filePathParam}`,
       ] },
     },
-    include: { document: true },
+    include: { document: { include: DOCUMENT_ACCESS_INCLUDE } },
   });
 
   if (matchingAttachment?.document) {
-    if (!canReadDocument(authUser, matchingAttachment.document)) {
+    if (!(await canReadDocumentFile(authUser, matchingAttachment.document))) {
       throw new ForbiddenError(
         "Bạn không có quyền truy cập tệp đính kèm của văn bản này"
       );
@@ -136,18 +175,7 @@ export async function authorizeFileObjectDownload({
     include: {
       // Quyền đọc văn bản theo đơn vị cần đủ đơn vị xử lý (workflow, chỉ đạo, nhiệm vụ liên kết), nên nạp như route /api/files.
       attachments: {
-        include: {
-          document: {
-            include: {
-              directives: true,
-              incomingWorkflow: { include: { unitAssignments: true } },
-              linkedTask: { select: { leadUnitId: true } },
-              // Đơn vị nhận văn bản đi đã phát hành đọc được văn bản, nên tải được tệp (ADR-015).
-              outgoingWorkflow: { select: { status: true } },
-              outgoingRecipients: { select: { kind: true, unitId: true } },
-            },
-          },
-        },
+        include: { document: { include: DOCUMENT_ACCESS_INCLUDE } },
       },
       deliverables: { include: { task: true } },
       dossierItems: { include: { dossier: true } },
@@ -161,18 +189,13 @@ export async function authorizeFileObjectDownload({
   });
   if (!file || file.isArchived) throw new NotFoundError("Không tìm thấy tệp");
 
-  // Ngữ cảnh phân quyền đầy đủ (chức danh, đơn vị, kiêm nhiệm) để trưởng đơn vị và lãnh đạo mở được tệp của văn bản
-  // thuộc đơn vị mình; chỉ có `authUser` (id + vai trò) thì quy tắc theo đơn vị luôn từ chối. Giữ cổng cũ theo `authUser`
-  // như route /api/files để không mất quyền của tài khoản chỉ có vai trò (vd. văn thư).
-  const documentAuthContext = file.attachments.some((attachment) => attachment.document)
-    ? await loadAuthorizationContext(authUser.id, new Date())
-    : null;
-  let hasAuthorizedResource = file.attachments.some(
-    (attachment) =>
-      attachment.document &&
-      ((documentAuthContext && canReadDocument(documentAuthContext, attachment.document)) ||
-        canReadDocument(authUser, attachment.document))
-  );
+  let hasAuthorizedResource = false;
+  for (const attachment of file.attachments) {
+    if (attachment.document && (await canReadDocumentFile(authUser, attachment.document))) {
+      hasAuthorizedResource = true;
+      break;
+    }
+  }
 
   if (!hasAuthorizedResource && file.deliverables.length > 0) {
     const authorizationContext = await loadAuthorizationContext(authUser.id, new Date(), {
@@ -318,31 +341,11 @@ export async function authorizeLegacyFilePathDownload({
     where: {
       fileUrl: { in: candidateUrls },
     },
-    include: {
-      document: {
-        include: {
-          directives: true,
-          incomingWorkflow: {
-            include: {
-              unitAssignments: true,
-            },
-          },
-          linkedTask: { select: { leadUnitId: true } },
-          outgoingWorkflow: { select: { status: true } },
-          outgoingRecipients: { select: { kind: true, unitId: true } },
-        },
-      },
-    },
+    include: { document: { include: DOCUMENT_ACCESS_INCLUDE } },
   });
 
   if (attachment) {
-    // Ngữ cảnh phân quyền đầy đủ (mọi phân công đang hiệu lực, kể cả kiêm nhiệm), nạp mới (không cache)
-    // để phân công vừa hết hạn không còn cấp quyền tải tệp. Giữ thêm cổng cũ theo `authUser` để không làm
-    // mất quyền của tài khoản chỉ có vai trò (ví dụ văn thư chưa có phân công chức danh).
-    const docAuthCtx = await loadAuthorizationContext(authUser.id, new Date());
-    const canReadAttachment =
-      Boolean(attachment.document) &&
-      (canReadDocument(docAuthCtx, attachment.document) || canReadDocument(authUser, attachment.document));
+    const canReadAttachment = Boolean(attachment.document) && (await canReadDocumentFile(authUser, attachment.document));
     if (!canReadAttachment) {
       logger.fileAccessDenied({
         requestId,

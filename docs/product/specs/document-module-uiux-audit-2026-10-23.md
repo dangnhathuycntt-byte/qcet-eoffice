@@ -386,7 +386,7 @@ Lý do đặt A trước: A1–A5 là điều kiện để luồng chạy đư�
 
 | Mục | Trạng thái |
 |---|---|
-| (đang triển khai theo nhánh `feat/document-flow-closure`) | |
+| A1 · Q1 + T3 (đọc và duyệt theo đơn vị soạn, mở tệp) | **Xong** 23/10/2026, nhánh `feat/document-flow-closure`. Cột `document_outgoing_workflows.drafting_unit_id` (migration `20261023150000`, điền sẵn cho dự thảo cũ theo phân công chính của người soạn); `createOutgoingDraft` ghi đơn vị soạn (chỉ nhận `draftingDeptId` nếu là đơn vị người soạn đang giữ chức danh). Trưởng/phó đơn vị soạn và người được trình duyệt/kiểm thể thức/ký đọc được (chi tiết, danh sách, tệp); đồng nghiệp cùng đơn vị không đọc dự thảo chưa trình. `approveContent`/`rejectContent` thêm kiểm phạm vi: chỉ người được trình, trưởng/phó đơn vị soạn hoặc lãnh đạo trường (trước đó trưởng đơn vị nào cũng duyệt được dự thảo của đơn vị khác). Tệp: `file-access-service` dùng chung một hàm đọc (ngữ cảnh đầy đủ + người tham gia duyệt tờ trình). Test `apps/api/tests/outgoing-drafting-unit-access.test.ts` (7 ca; bỏ sửa ACL thì ca 2, 4, 6 đỏ); 235/235 ca ở 18 tệp liên quan xanh. Kiểm trực tiếp trên `qcet_audit`: trưởng P.QLĐT 200, trưởng Khoa CNTT và chuyên viên CNTT 403, trưởng CNTT duyệt dự thảo của P.QLĐT 403 kèm lý do, trưởng P.QLĐT duyệt 200. Chưa kiểm trên trình duyệt vì không đổi giao diện |
 
 ## 10. Tiêu chí nghiệm thu chung
 

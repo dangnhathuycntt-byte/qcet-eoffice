@@ -826,6 +826,10 @@ model DocumentOutgoingWorkflow {
   archivedById              String?                @map("archived_by_id")
   archivedBy                User?                  @relation("DocWorkflowOutgoingArchivedBy", fields: [archivedById], references: [id], onDelete: SetNull)
 
+  // Đơn vị soạn: trưởng/phó đơn vị này được đọc và duyệt dự thảo của nhân viên mình (Document không có cột đơn vị).
+  draftingUnitId            String?                @map("drafting_unit_id")
+  draftingUnit              OrganizationalUnit?    @relation("DocWorkflowDraftingUnit", fields: [draftingUnitId], references: [id], onDelete: SetNull)
+
   // Thu hồi (V-05): chỉ khi chưa bên nhận nào xác nhận tiếp nhận. Số đã cấp không tái sử dụng.
   recalledAt                DateTime?              @map("recalled_at")
   recalledById              String?                @map("recalled_by_id")
@@ -841,6 +845,7 @@ model DocumentOutgoingWorkflow {
   @@index([authorizedSignerId])
   @@index([contentReviewerId])
   @@index([formatReviewerId])
+  @@index([draftingUnitId])
   @@map("document_outgoing_workflows")
 }
 
@@ -1104,6 +1109,7 @@ model OrganizationalUnit {
   leadTasks           Task[]               @relation("TaskLeadUnit")
   taskActors          TaskActor[]
   leadWorkflows       DocumentIncomingWorkflow[] @relation("DocWorkflowLeadUnit")
+  draftingWorkflows   DocumentOutgoingWorkflow[] @relation("DocWorkflowDraftingUnit")
   unitAssignments     UnitWorkAssignment[]       @relation("UnitWorkAssignmentUnit")
   documentReturnsFrom DocumentUnitReturn[]       @relation("DocReturnFromUnit")
   documentReturnsTo   DocumentUnitReturn[]       @relation("DocReturnToUnit")

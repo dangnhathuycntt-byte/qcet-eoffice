@@ -30,7 +30,11 @@ import type {
 } from './authorization-context';
 import { AuthorizationContextModel, SystemRole } from './authorization-context';
 import type { AuthenticatedUser } from '@/server/api/request-context';
-import { isExecutivePosition } from './authorization-engine';
+import {
+  isDeputyUnitLeaderPosition,
+  isExecutivePosition,
+  isUnitLeaderPosition,
+} from './authorization-engine';
 import { deliveredUnitIds } from '@qcet/shared/domain/documents/delivery-rules';
 
 export type DocumentApplicationClassification =
@@ -72,8 +76,17 @@ export interface DocumentClassificationTarget {
   hasConsentOrLegalBasis?: boolean;
   directives?: any[] | null;
   incomingWorkflow?: any | null;
-  /** Văn bản đi đã phát hành: đơn vị có tên trong nơi nhận được đọc như văn bản đến của mình (ADR-015). */
-  outgoingWorkflow?: { status?: string | null } | null;
+  /**
+   * Văn bản đi: đơn vị có tên trong nơi nhận được đọc như văn bản đến của mình sau khi phát hành (ADR-015);
+   * người được chỉ định duyệt/ký là bên liên quan trực tiếp; trưởng/phó `draftingUnitId` đọc dự thảo của nhân viên mình.
+   */
+  outgoingWorkflow?: {
+    status?: string | null;
+    contentReviewerId?: string | null;
+    formatReviewerId?: string | null;
+    authorizedSignerId?: string | null;
+    draftingUnitId?: string | null;
+  } | null;
   outgoingRecipients?: Array<{ kind?: string | null; unitId?: string | null }> | null;
   /**
    * Nhiệm vụ liên kết (nếu truy vấn có nạp). Chỉ `leadUnitId` được dùng để xác định đơn vị xử lý văn bản.
@@ -322,6 +335,17 @@ function hasDirectDocumentRelationship(
     if (matchedDirective) return true;
   }
 
+  // Văn bản đi: người được trình duyệt nội dung, kiểm tra thể thức hoặc ký thay mặt phải mở được văn bản mình xử lý.
+  const outgoing = doc.outgoingWorkflow;
+  if (
+    outgoing &&
+    (outgoing.contentReviewerId === userId ||
+      outgoing.formatReviewerId === userId ||
+      outgoing.authorizedSignerId === userId)
+  ) {
+    return true;
+  }
+
   // Incoming workflow assignments
   if (doc.incomingWorkflow) {
     if (doc.incomingWorkflow.leaderId === userId) return true;
@@ -339,6 +363,23 @@ function hasDirectDocumentRelationship(
   }
 
   return false;
+}
+
+/**
+ * Trưởng/phó đơn vị soạn văn bản đi đọc được dự thảo của nhân viên mình để duyệt. Chỉ người đứng đầu, không phải
+ * mọi thành viên đơn vị: dự thảo chưa trình chưa phải văn bản của cả đơn vị.
+ */
+function isLeaderOfDraftingUnit(
+  context: AuthorizationContext,
+  doc: DocumentClassificationTarget
+): boolean {
+  const draftingUnitId = doc.outgoingWorkflow?.draftingUnitId;
+  if (!draftingUnitId) return false;
+  return (context.positions || []).some(
+    (p) =>
+      p.unitId === draftingUnitId &&
+      (isUnitLeaderPosition(p.positionCode) || isDeputyUnitLeaderPosition(p.positionCode))
+  );
 }
 
 function hasValidActiveDelegation(
@@ -564,6 +605,13 @@ export function canAccessClassification(
       return {
         allowed: true,
         reason: 'Cán bộ văn thư có thẩm quyền vào sổ đăng ký và tiếp nhận văn bản.',
+      };
+    }
+
+    if (isLeaderOfDraftingUnit(context, document)) {
+      return {
+        allowed: true,
+        reason: 'Trưởng/phó đơn vị soạn được đọc dự thảo văn bản đi của đơn vị mình.',
       };
     }
 
