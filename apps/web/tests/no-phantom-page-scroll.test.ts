@@ -37,3 +37,12 @@ test("hộp Tạo nhiệm vụ: mô tả nằm trong Popup", () => {
   const description = source.indexOf("<Dialog.Description");
   assert.ok(popupStart > 0 && description > popupStart && description < popupEnd);
 });
+
+test("main của khung ứng dụng là khối chứa (relative) cho phần tử absolute không có tổ tiên định vị", () => {
+  // Quét 19 trang × 3 cỡ (1000×650, 1440×900, 390×800) với dữ liệu thử: /documents cuộn cả cửa sổ thêm 389px/139px vì các `span.sr-only`
+  // trong hàng sổ văn bản có khối chứa là khung ngoài cùng, `overflow-hidden` của main không cắt được. `relative` ở main sửa cả lớp lỗi.
+  const shell = readFileSync("src/components/layout/app-shell.tsx", "utf8");
+  const mainClasses = [...shell.matchAll(/"(relative )?(flex[^"]*overflow-hidden)"/g)].filter((m) => m[2].includes("min-w-0") || m[2].includes("md:ml-2"));
+  assert.ok(mainClasses.length >= 3, "ba nhánh className của <main> (workspace, full-height, trang thường)");
+  for (const match of mainClasses) assert.equal(match[1], "relative ", `thiếu relative: ${match[2].slice(0, 60)}`);
+});

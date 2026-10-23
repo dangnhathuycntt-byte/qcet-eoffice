@@ -45,15 +45,18 @@ describe("Compact Composer Modal - Production Specification", () => {
     // 1. SSR renders the component without throwing
     assert.ok(typeof html === "string", "Component must render without error");
 
-    // 2. Dialog.Description renders as sr-only accessibility text outside the portal
+    // 2. Dialog.Description (sr-only) nằm TRONG Popup, không đặt sau Portal (23/10/2026): ở ngoài thì nó là `<p>` absolute cuối nội dung
+    //    trang, làm cả trang cuộn và đọc lên như một đoạn thừa khi hộp đóng. SSR không dựng portal nên không thấy chữ trong html.
+    const modalSource = fs.readFileSync("src/components/tasks/create/create-task-modal.tsx", "utf8");
+    const popupStart = modalSource.indexOf("<Dialog.Popup");
+    const popupEnd = modalSource.indexOf("</Dialog.Popup>");
+    const descriptionAt = modalSource.indexOf("<Dialog.Description");
     assert.ok(
-      html.includes("Biểu mẫu tạo nhiệm vụ mới"),
-      "Dialog.Description must render accessible description text"
+      descriptionAt > popupStart && descriptionAt < popupEnd,
+      "Dialog.Description must live inside Dialog.Popup"
     );
-    assert.ok(
-      html.includes("sr-only"),
-      "Dialog.Description must be screen-reader-only"
-    );
+    assert.match(modalSource, /<Dialog\.Description className="sr-only">Biểu mẫu tạo nhiệm vụ mới<\/Dialog\.Description>/, "accessible description text, screen-reader-only");
+    assert.ok(!html.includes("Biểu mẫu tạo nhiệm vụ mới"), "description must not render in the page flow outside the dialog");
 
     // 3. AI / Mock Feature Scope: Must NOT render 'Tạo cùng Agent' in production
     assert.ok(
