@@ -586,6 +586,8 @@ export function CreateTaskModal({
                   {/* Breadcrumb như hộp Tạo cuộc họp (người dùng yêu cầu thêm lại 21/10/2026, thay quyết định bỏ ngày 17/10);
                       tiêu đề hộp cho trình đọc màn hình. Giao việc con thì nêu việc cha ở giữa cho rõ ngữ cảnh */}
                   <Dialog.Title className="sr-only">{initialParentTaskId ? "Giao việc con" : "Tạo nhiệm vụ"}</Dialog.Title>
+                  {/* Nằm trong khung hộp, không đặt sau Portal: `sr-only` là absolute nên ở ngoài sẽ nằm cuối trang và làm cả trang cuộn */}
+                  <Dialog.Description className="sr-only">Biểu mẫu tạo nhiệm vụ mới</Dialog.Description>
                   <DialogBreadcrumb
                     items={
                       initialParentTaskTitle
@@ -991,9 +993,6 @@ export function CreateTaskModal({
           </Dialog.Popup>
         </Dialog.Portal>
 
-        <Dialog.Description className="sr-only">
-          Biểu mẫu tạo nhiệm vụ mới
-        </Dialog.Description>
       </Dialog.Root>
     </>
   );
