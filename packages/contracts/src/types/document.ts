@@ -71,6 +71,7 @@ export interface DocumentDirectiveItem {
 /** Thao tác theo bước của văn bản đi; mỗi giá trị là tên route `/api/documents/{id}/actions/{slug}`. */
 export type OutgoingStepSlug =
   | 'submit-content-review'
+  | 'withdraw-content-review'
   | 'approve-content'
   | 'reject-content'
   | 'approve-format'
@@ -86,6 +87,16 @@ export interface OutgoingWaiting {
   since: string | null;
 }
 
+/** Người có thể được chọn duyệt nội dung dự thảo khi trình. */
+export interface OutgoingReviewer {
+  id: string;
+  name: string;
+  /** Chức danh kèm đơn vị, ví dụ "Trưởng phòng · Phòng Đào tạo". */
+  title: string;
+  /** Mặc định của bước trình: trưởng đơn vị soạn. */
+  recommended: boolean;
+}
+
 /** Lần trả lại gần nhất của dự thảo đang ở Nháp: ai trả, khi nào, lý do (null khi người trả không ghi lý do). */
 export interface OutgoingReturned {
   by: string | null;
@@ -99,6 +110,8 @@ export interface OutgoingStepView {
   waiting: OutgoingWaiting | null;
   /** Dự thảo bị trả lại để sửa (đang ở Nháp sau khi người duyệt trả); null ở mọi trường hợp khác. */
   returned: OutgoingReturned | null;
+  /** Người chọn được làm người duyệt; chỉ có khi người xem trình được dự thảo. */
+  reviewers: OutgoingReviewer[];
 }
 
 export interface DocumentItem {

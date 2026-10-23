@@ -150,6 +150,25 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
 
       },
     });
+
+    // Người soạn và trưởng phòng cùng đơn vị: trưởng phòng là người duyệt chọn được khi trình (đơn vị soạn của dự thảo)
+    for (const [user, code] of [
+      [drafterSpecialist, "CHUYEN_VIEN"],
+      [unitHeadAcademic, "TRUONG_PHONG"],
+    ] as const) {
+      const def = await prisma.positionDefinition.findUnique({ where: { code } });
+      assert.ok(def, `Thiếu PositionDefinition ${code}`);
+      await prisma.positionAssignment.create({
+        data: {
+          userId: user.id,
+          positionDefinitionId: def.id,
+          unitId: deptAcademicId,
+          type: "PRIMARY",
+          status: "ACTIVE",
+          effectiveFrom: new Date("2024-01-01T00:00:00.000Z"),
+        },
+      });
+    }
   });
 
   after(async () => {
@@ -171,6 +190,9 @@ describe("Phase 6: Outgoing Documents V2 & Digital Signatures (Nghị định 30
       });
       await prisma.document.deleteMany({
         where: { id: { in: docIds } },
+      });
+      await prisma.positionAssignment.deleteMany({
+        where: { userId: { in: [drafterSpecialist.id, unitHeadAcademic.id] } },
       });
       await prisma.user.deleteMany({
         where: {

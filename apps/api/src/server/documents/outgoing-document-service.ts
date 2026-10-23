@@ -57,6 +57,7 @@ import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@qcet/shared/con
 import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
 import { formatReturnedNote, type OutgoingStepSlug } from "@qcet/shared/domain/documents/outgoing-steps";
+import { listContentReviewers } from "@/server/documents/outgoing-reviewers";
 import {
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
@@ -82,6 +83,10 @@ export interface CreateOutgoingDraftInput {
   fileSize?: number;
   fileType?: string;
   notes?: string;
+}
+
+export interface WithdrawContentReviewInput {
+  documentId: string;
 }
 
 export interface SubmitContentReviewInput {
@@ -276,6 +281,11 @@ export async function runOutgoingStepGate(
     case "submit-content-review":
       // Chỉ người soạn trình dự thảo của mình; quyền theo chức danh không phân biệt người soạn với người khác.
       if (user.id !== drafterId) throw new ForbiddenError("Chỉ người soạn mới trình duyệt dự thảo của mình.");
+      await check("document.outgoing.submit_content_review", { id, type: "document", scope: "unit", ...owner, drafterId });
+      return;
+    case "withdraw-content-review":
+      // Chỉ người soạn lấy lại dự thảo của mình khi người duyệt chưa quyết.
+      if (user.id !== drafterId) throw new ForbiddenError("Chỉ người soạn mới rút lại dự thảo của mình.");
       await check("document.outgoing.submit_content_review", { id, type: "document", scope: "unit", ...owner, drafterId });
       return;
     case "approve-content":
@@ -513,17 +523,34 @@ export class OutgoingDocumentService {
       assertAuthorized(user, action, resource)
     );
 
+    // Người duyệt: người soạn chọn trong danh sách trưởng đơn vị soạn và lãnh đạo; không chọn thì mặc định trưởng đơn vị soạn.
+    const reviewers = await listContentReviewers(existing.draftingUnitId, existing.document.registeredById);
+    if (input.contentReviewerId && !reviewers.some((r) => r.id === input.contentReviewerId)) {
+      throw new ValidationError(
+        "Người được chọn không phải trưởng đơn vị soạn hay lãnh đạo trường nên không duyệt được nội dung dự thảo này.",
+        undefined,
+        "INVALID_CONTENT_REVIEWER"
+      );
+    }
+    const contentReviewerId = input.contentReviewerId ?? reviewers.find((r) => r.recommended)?.id ?? null;
+
     return prisma.$transaction(async (tx) => {
       const now = new Date();
-      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
-        where: { documentId: input.documentId },
+      // Nhận việc có điều kiện trạng thái: hai lần bấm đồng thời chỉ một lần trình được
+      const claimed = await tx.documentOutgoingWorkflow.updateMany({
+        where: { documentId: input.documentId, status: OutgoingDocumentStatus.DRAFT },
         data: {
           status: OutgoingDocumentStatus.CONTENT_REVIEW,
           contentReviewSubmittedAt: now,
-          contentReviewerId: input.contentReviewerId,
-          contentReviewNotes: input.notes,
+          contentReviewerId,
+          // Lời nhắn của người soạn thay cho ghi chú trả lại của lần trước (lịch sử trả lại còn trong nhật ký)
+          contentReviewNotes: input.notes ?? null,
         },
       });
+      if (claimed.count === 0) {
+        throw new InvalidTransitionError("Dự thảo đã được trình hoặc đã thay đổi trạng thái. Hãy tải lại.");
+      }
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: input.documentId } });
 
       await tx.document.update({
         where: { id: input.documentId },
@@ -542,7 +569,7 @@ export class OutgoingDocumentService {
         afterData: {
           status: updatedWorkflow.status,
           contentReviewSubmittedAt: now,
-          contentReviewerId: input.contentReviewerId,
+          contentReviewerId,
         },
       });
 
@@ -552,8 +579,82 @@ export class OutgoingDocumentService {
         aggregateId: input.documentId,
         payload: {
           documentId: input.documentId,
-          contentReviewerId: input.contentReviewerId,
+          contentReviewerId,
           submittedBy: user.id,
+        },
+      });
+
+      return updatedWorkflow;
+    });
+  }
+
+  /**
+   * 2b. WITHDRAW CONTENT REVIEW (Rút lại)
+   * Người soạn lấy dự thảo về Nháp khi người duyệt chưa quyết; người duyệt mất việc khỏi hàng đợi và được báo.
+   */
+  static async withdrawContentReview(
+    input: WithdrawContentReviewInput,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
+    context?: { requestId?: string }
+  ) {
+    const user = await resolveUserContext(actor);
+    const requestId = context?.requestId || `req_${Date.now()}`;
+
+    const existing = await prisma.documentOutgoingWorkflow.findUnique({
+      where: { documentId: input.documentId },
+      include: { document: true },
+    });
+    if (!existing) {
+      throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
+    }
+    if (existing.status !== OutgoingDocumentStatus.CONTENT_REVIEW) {
+      throw new InvalidTransitionError(
+        `Chỉ rút lại được dự thảo đang chờ duyệt nội dung (trạng thái hiện tại: ${existing.status}). Người duyệt có thể đã xử lý xong.`
+      );
+    }
+
+    await runOutgoingStepGate("withdraw-content-review", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
+
+    return prisma.$transaction(async (tx) => {
+      const claimed = await tx.documentOutgoingWorkflow.updateMany({
+        where: { documentId: input.documentId, status: OutgoingDocumentStatus.CONTENT_REVIEW },
+        data: {
+          status: OutgoingDocumentStatus.DRAFT,
+          contentReviewSubmittedAt: null,
+          contentReviewerId: null,
+          contentReviewNotes: null,
+        },
+      });
+      if (claimed.count === 0) {
+        throw new InvalidTransitionError("Người duyệt vừa xử lý dự thảo này nên không rút lại được. Hãy tải lại.");
+      }
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: input.documentId } });
+
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: { status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.DRAFT) },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: "DOCUMENT_CONTENT_REVIEW_WITHDRAWN",
+        entityType: AuditEntityType.DOCUMENT,
+        entityId: input.documentId,
+        requestId,
+        beforeData: { status: existing.status, contentReviewerId: existing.contentReviewerId },
+        afterData: { status: updatedWorkflow.status },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: "DOCUMENT_CONTENT_REVIEW_WITHDRAWN",
+        aggregateType: OutboxAggregateType.DOCUMENT,
+        aggregateId: input.documentId,
+        payload: {
+          documentId: input.documentId,
+          drafterId: user.id,
+          contentReviewerId: existing.contentReviewerId,
         },
       });
 
@@ -583,12 +684,10 @@ export class OutgoingDocumentService {
       throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
     }
 
-    if (
-      existing.status !== OutgoingDocumentStatus.CONTENT_REVIEW &&
-      existing.status !== OutgoingDocumentStatus.DRAFT
-    ) {
+    // Chỉ dự thảo đã trình mới duyệt được: bản nháp chưa trình (hoặc đã được người soạn rút lại) không phải việc của người duyệt.
+    if (existing.status !== OutgoingDocumentStatus.CONTENT_REVIEW) {
       throw new InvalidTransitionError(
-        `Không thể phê duyệt nội dung ở trạng thái hiện tại (${existing.status}).`
+        `Không thể phê duyệt nội dung ở trạng thái hiện tại (${existing.status}). Yêu cầu trạng thái CONTENT_REVIEW.`
       );
     }
 
@@ -598,8 +697,9 @@ export class OutgoingDocumentService {
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
-      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
-        where: { documentId: input.documentId },
+      // Nhận việc có điều kiện trạng thái: người soạn rút lại giữa chừng thì không duyệt nhầm bản nháp
+      const claimed = await tx.documentOutgoingWorkflow.updateMany({
+        where: { documentId: input.documentId, status: OutgoingDocumentStatus.CONTENT_REVIEW },
         data: {
           status: OutgoingDocumentStatus.FORMAT_CHECK,
           contentApprovedAt: now,
@@ -608,6 +708,10 @@ export class OutgoingDocumentService {
           formatReviewSubmittedAt: now,
         },
       });
+      if (claimed.count === 0) {
+        throw new InvalidTransitionError("Dự thảo đã được người soạn rút lại hoặc xử lý ở bước khác. Hãy tải lại.");
+      }
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: input.documentId } });
 
       await tx.document.update({
         where: { id: input.documentId },
@@ -678,14 +782,18 @@ export class OutgoingDocumentService {
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
-      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
-        where: { documentId: input.documentId },
+      const claimed = await tx.documentOutgoingWorkflow.updateMany({
+        where: { documentId: input.documentId, status: OutgoingDocumentStatus.CONTENT_REVIEW },
         data: {
           status: OutgoingDocumentStatus.DRAFT,
           contentReviewNotes: formatReturnedNote(input.notes),
           contentReviewSubmittedAt: null,
         },
       });
+      if (claimed.count === 0) {
+        throw new InvalidTransitionError("Dự thảo đã được người soạn rút lại hoặc xử lý ở bước khác. Hãy tải lại.");
+      }
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: input.documentId } });
 
       await tx.document.update({
         where: { id: input.documentId },

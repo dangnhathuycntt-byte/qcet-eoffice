@@ -38,6 +38,7 @@ describe("Văn bản đi: đơn vị soạn, quyền đọc/duyệt của trư�
   let leaderA: any;
   let leaderB: any;
   let reviewerB: any;
+  let rector: any;
   let outsiderB: any;
   let draftId: string;
 
@@ -98,6 +99,7 @@ describe("Văn bản đi: đơn vị soạn, quyền đọc/duyệt của trư�
     leaderA = await makeUser("leaderA", UserRole.TRUONG_PHONG, "TRUONG_PHONG", unitA);
     leaderB = await makeUser("leaderB", UserRole.TRUONG_PHONG, "TRUONG_PHONG", unitB);
     reviewerB = await makeUser("reviewerB", UserRole.CHUYEN_VIEN, "CHUYEN_VIEN", unitB);
+    rector = await makeUser("rector", UserRole.BAN_GIAM_HIEU, "HIEU_TRUONG", unitB);
     outsiderB = await makeUser("outsiderB", UserRole.CHUYEN_VIEN, "CHUYEN_VIEN", unitB);
   });
 
@@ -155,9 +157,10 @@ describe("Văn bản đi: đơn vị soạn, quyền đọc/duyệt của trư�
   });
 
   it("4. Người được trình duyệt nội dung đọc được dù khác đơn vị; người khác vẫn không", async () => {
-    await OutgoingDocumentService.submitContentReview({ documentId: draftId, contentReviewerId: reviewerB.id }, drafter);
-    assert.equal(await canOpen(reviewerB, draftId), true);
-    assert.equal(await canList(reviewerB, draftId), true);
+    // Người duyệt chọn được là trưởng đơn vị soạn hoặc lãnh đạo trường; ở đây chọn Hiệu trưởng (đơn vị khác)
+    await OutgoingDocumentService.submitContentReview({ documentId: draftId, contentReviewerId: rector.id }, drafter);
+    assert.equal(await canOpen(rector, draftId), true);
+    assert.equal(await canList(rector, draftId), true);
     assert.equal(await canOpen(outsiderB, draftId), false);
     assert.equal(await canList(outsiderB, draftId), false);
   });

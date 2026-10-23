@@ -22,6 +22,8 @@ export const OUTGOING_STEP_ACTIONS: Partial<Record<OutgoingDocumentStatus, Outgo
   CONTENT_REVIEW: [
     { action: "approve-content", to: "FORMAT_CHECK" },
     { action: "reject-content", to: "DRAFT", requiresNote: true },
+    // Người soạn lấy lại dự thảo khi người duyệt chưa quyết (đang CONTENT_REVIEW nghĩa là chưa duyệt)
+    { action: "withdraw-content-review", to: "DRAFT" },
   ],
   FORMAT_CHECK: [{ action: "approve-format", to: "AUTHORIZED_SIGN" }],
   AUTHORIZED_SIGN: [

@@ -21,6 +21,7 @@ import { authorize } from "@/server/authorization/hybrid-authorization";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { ForbiddenError } from "@/server/api/errors";
 import { resolveUserContext } from "@/server/documents/incoming-document-service";
+import { listContentReviewers } from "@/server/documents/outgoing-reviewers";
 import { runOutgoingStepGate, type OutgoingStepSubject } from "@/server/documents/outgoing-document-service";
 
 interface WorkflowRow {
@@ -101,14 +102,22 @@ export async function buildOutgoingStepView(
       ? await loadReturned(document.id, workflow.contentReviewNotes)
       : null;
 
-  return {
-    actions,
-    returned,
-    waiting: describeOutgoingWaiting({
-      ...workflow,
-      status: workflow.status as ContractStatus,
-      contentReviewerName: workflow.contentReviewerId ? names.get(workflow.contentReviewerId) : null,
-      authorizedSignerName: workflow.authorizedSignerId ? names.get(workflow.authorizedSignerId) : null,
-    }),
-  };
+  // Người trình được chọn người duyệt; người khác không cần danh sách này
+  const reviewers = actions.includes("submit-content-review")
+    ? await listContentReviewers(workflow.draftingUnitId, document.registeredById)
+    : [];
+
+  // Có việc để làm ở bước đang chờ thì không cần dòng "Đang chờ": chỉ người chưa đến lượt (kể cả người soạn chỉ còn
+  // nút Rút lại) mới cần biết ai đang giữ bước.
+  const hasStepWork = actions.some((action) => action !== "withdraw-content-review");
+  const waiting = hasStepWork
+    ? null
+    : describeOutgoingWaiting({
+        ...workflow,
+        status: workflow.status as ContractStatus,
+        contentReviewerName: workflow.contentReviewerId ? names.get(workflow.contentReviewerId) : null,
+        authorizedSignerName: workflow.authorizedSignerId ? names.get(workflow.authorizedSignerId) : null,
+      });
+
+  return { actions, returned, reviewers, waiting };
 }

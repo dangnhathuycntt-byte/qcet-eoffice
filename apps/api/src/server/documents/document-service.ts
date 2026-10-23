@@ -21,6 +21,10 @@ import {
 import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
 import {
   isDocumentImmutable,
+  isOutgoingUnderReview,
+  patchTouchesLockedContent,
+  OUTGOING_UNDER_REVIEW_CODE,
+  OUTGOING_UNDER_REVIEW_MESSAGE,
   mapIncomingWorkflowStatusToDocumentStatus,
   mapOutgoingWorkflowStatusToDocumentStatus,
 } from "./state-machine";
@@ -554,6 +558,9 @@ export async function updateDocument(
       "IMMUTABLE_DOCUMENT"
     );
   }
+  if (isOutgoingUnderReview(existing) && patchTouchesLockedContent(payload)) {
+    throw new ValidationError(OUTGOING_UNDER_REVIEW_MESSAGE, undefined, OUTGOING_UNDER_REVIEW_CODE);
+  }
 
   if (
     payload.status !== undefined ||
@@ -683,6 +690,9 @@ export async function applyDocumentPatch(
             undefined,
             "IMMUTABLE_DOCUMENT"
           );
+        }
+        if (isOutgoingUnderReview(fresh) && patchTouchesLockedContent(rest)) {
+          throw new ValidationError(OUTGOING_UNDER_REVIEW_MESSAGE, undefined, OUTGOING_UNDER_REVIEW_CODE);
         }
         if (!canUpdateDocument(authUser, fresh)) {
           throw new ForbiddenError("Bạn không có quyền cập nhật văn bản này (Forbidden)");

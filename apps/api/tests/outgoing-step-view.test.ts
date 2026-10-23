@@ -98,7 +98,7 @@ describe("Văn bản đi: thao tác theo người xem (outgoingStep)", () => {
   it("CONTENT_REVIEW: trưởng đơn vị soạn duyệt/trả; người soạn và trưởng đơn vị khác không; ai cũng thấy đang chờ ai", async () => {
     await setWorkflow({ status: OutgoingDocumentStatus.CONTENT_REVIEW, contentReviewSubmittedAt: new Date() });
     assert.deepEqual(await actionsOf("leaderA"), ["approve-content", "reject-content"]);
-    assert.deepEqual(await actionsOf("drafter"), [], "người soạn không tự duyệt (SoD)");
+    assert.deepEqual(await actionsOf("drafter"), ["withdraw-content-review"], "người soạn không tự duyệt (SoD), chỉ rút lại được");
     assert.deepEqual(await actionsOf("leaderB"), [], "trưởng đơn vị khác không duyệt dự thảo không phải của mình");
     assert.deepEqual(await actionsOf("clerk"), []);
     const waiting = (await view("drafter"))?.waiting;
@@ -151,6 +151,6 @@ describe("Văn bản đi: thao tác theo người xem (outgoingStep)", () => {
   it("Bước đã qua không còn chờ ai (ISSUED)", async () => {
     await setWorkflow({ status: OutgoingDocumentStatus.ISSUED, issuedAt: new Date() });
     const result = await view("clerk");
-    assert.deepEqual(result, { actions: [], waiting: null, returned: null });
+    assert.deepEqual(result, { actions: [], waiting: null, returned: null, reviewers: [] });
   });
 });

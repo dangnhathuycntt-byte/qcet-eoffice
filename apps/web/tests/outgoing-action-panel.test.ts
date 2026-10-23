@@ -33,4 +33,14 @@ describe("OutgoingActionPanel hiện nút theo server, không theo trạng thái
     assert.match(source, /readApiErrorMessage\(/);
     assert.doesNotMatch(source, /data\.message/);
   });
+
+  it("trình duyệt mở hộp chọn người duyệt riêng, không dùng hộp xác nhận trần; có nút Rút lại", () => {
+    assert.match(source, /OutgoingSubmitDialog/);
+    assert.match(source, /"withdraw-content-review"/);
+    const dialog = fs.readFileSync(path.join(__dirname, "../src/components/documents/outgoing-submit-dialog.tsx"), "utf8");
+    assert.match(dialog, /<DialogForm/);
+    assert.match(dialog, /type="submit"/);
+    assert.match(dialog, /initialFocus/);
+    assert.match(dialog, /contentReviewerId/);
+  });
 });

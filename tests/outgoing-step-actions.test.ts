@@ -27,7 +27,7 @@ describe('thao tác theo bước của văn bản đi khớp máy trạng thái 
     const at = (status: OutgoingDocumentStatus) => (OUTGOING_STEP_ACTIONS[status] ?? []).map((a) => a.action);
     assert.deepEqual(at('AUTHORIZED_SIGN'), ['sign', 'assign-number']);
     assert.deepEqual(at('NUMBERED'), ['organization-sign']);
-    assert.deepEqual(at('CONTENT_REVIEW'), ['approve-content', 'reject-content']);
+    assert.deepEqual(at('CONTENT_REVIEW'), ['approve-content', 'reject-content', 'withdraw-content-review']);
     assert.equal(OUTGOING_STEP_ACTIONS.CONTENT_REVIEW?.find((a) => a.action === 'reject-content')?.requiresNote, true);
     assert.deepEqual(at('ORGANIZATION_SIGNED'), [], 'phát hành làm ở khối nơi nhận');
     assert.ok(!Object.values(OUTGOING_STEP_ACTIONS).flat().some((a) => a?.action === 'revision'), 'revision là sửa đổi sau phát hành, không phải trả lại dự thảo');

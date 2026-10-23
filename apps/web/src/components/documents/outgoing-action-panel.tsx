@@ -10,6 +10,7 @@ import {
   Hash,
   Stamp,
   RotateCcw,
+  Undo2,
   AlertCircle,
   CheckCircle2,
   Clock,
@@ -23,6 +24,7 @@ import type { OutgoingDocumentStatus } from "@qcet/contracts/documents";
 import type { OutgoingReturned, OutgoingStepSlug, OutgoingStepView } from "@qcet/contracts/types/document";
 import { OUTGOING_STEP_ACTIONS } from "@qcet/shared/domain/documents/outgoing-steps";
 import { readApiErrorMessage } from "@/lib/documents/api-error";
+import { OutgoingSubmitDialog } from "./outgoing-submit-dialog";
 import { formatDateTime } from "@/lib/format";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -38,9 +40,15 @@ interface ActionDef {
 const ACTION_UI: Record<string, Omit<ActionDef, "action" | "requiresNote">> = {
   "submit-content-review": {
     label: "Trình phê duyệt nội dung",
-    description: "Gửi dự thảo lên Trưởng đơn vị để phê duyệt nội dung",
+    description: "Chọn người duyệt và gửi dự thảo để phê duyệt nội dung",
     variant: "primary",
     icon: ClipboardCheck,
+  },
+  "withdraw-content-review": {
+    label: "Rút lại",
+    description: "Đưa dự thảo về Nháp để sửa; người duyệt sẽ không còn thấy việc này",
+    variant: "secondary",
+    icon: Undo2,
   },
   "approve-content": {
     label: "Phê duyệt nội dung",
@@ -92,6 +100,19 @@ function actionDef(slug: OutgoingStepSlug): ActionDef {
   return { ...ACTION_UI[slug], action: slug, requiresNote: NOTE_REQUIRED.has(slug) };
 }
 
+/** Ai đang giữ bước và từ khi nào: "Đang chờ <ai> <việc> · từ <ngày giờ>". */
+function WaitingLine({ waiting }: { waiting: NonNullable<OutgoingStepView["waiting"]> }) {
+  return (
+    <p className="flex items-center gap-1.5 text-compact text-muted-foreground">
+      <Clock className="size-4 shrink-0" aria-hidden />
+      <span>
+        Đang chờ <span className="font-medium text-foreground">{waiting.who}</span> {waiting.task}
+        {waiting.since ? <span className="tabular-nums"> · từ {formatDateTime(waiting.since)}</span> : null}
+      </span>
+    </p>
+  );
+}
+
 /** Dự thảo bị người duyệt trả lại: ai trả, khi nào và lý do, ngay đầu khối thao tác để người soạn biết cần sửa gì. */
 function ReturnedNotice({ returned }: { returned: OutgoingReturned }) {
   const meta = [returned.by, returned.at ? formatDateTime(returned.at) : null].filter(Boolean).join(" · ");
@@ -130,6 +151,7 @@ export function OutgoingActionPanel({
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [confirmAction, setConfirmAction] = React.useState<ActionDef | null>(null);
+  const [submitOpen, setSubmitOpen] = React.useState(false);
   const [note, setNote] = React.useState("");
 
   const actions = (step?.actions ?? []).map(actionDef);
@@ -167,6 +189,11 @@ export function OutgoingActionPanel({
   function handleActionClick(actionDef: ActionDef) {
     setError(null);
     setSuccess(null);
+    // Trình duyệt có hộp riêng: chọn người duyệt và lời nhắn thay cho hộp xác nhận trần
+    if (actionDef.action === "submit-content-review") {
+      setSubmitOpen(true);
+      return;
+    }
     if (actionDef.requiresNote) {
       setNote("");
       setConfirmAction(actionDef);
@@ -181,13 +208,7 @@ export function OutgoingActionPanel({
       return (
         <div className={cn("space-y-2", className)}>
           {notice}
-          <p className="flex items-center gap-1.5 text-compact text-muted-foreground">
-            <Clock className="size-4 shrink-0" aria-hidden />
-            <span>
-              Đang chờ <span className="font-medium text-foreground">{waiting.who}</span> {waiting.task}
-              {waiting.since ? <span className="tabular-nums"> · từ {formatDateTime(waiting.since)}</span> : null}
-            </span>
-          </p>
+          <WaitingLine waiting={waiting} />
         </div>
       );
     }
@@ -206,6 +227,7 @@ export function OutgoingActionPanel({
     <div className={cn("rounded-lg border border-border bg-card p-3", className)}>
       <h3 className="text-xs font-semibold text-muted-foreground mb-2">Hành động</h3>
       {notice ? <div className="mb-2">{notice}</div> : null}
+      {waiting ? <div className="mb-2"><WaitingLine waiting={waiting} /></div> : null}
 
       <div className="flex flex-wrap items-center gap-1.5">
         {actions.map((actionDef) => {
@@ -244,6 +266,18 @@ export function OutgoingActionPanel({
           <span>{success}</span>
         </div>
       )}
+
+      <OutgoingSubmitDialog
+        open={submitOpen}
+        onOpenChange={setSubmitOpen}
+        documentId={documentId}
+        reviewers={step?.reviewers ?? []}
+        onSubmitted={(reviewer) => {
+          setSuccess(reviewer ? `Đã gửi ${reviewer.name} duyệt nội dung.` : "Đã gửi duyệt nội dung.");
+          onActionSuccess?.();
+          router.refresh();
+        }}
+      />
 
       {/* Confirmation Dialog */}
       <StandardDialog
