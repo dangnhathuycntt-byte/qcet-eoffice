@@ -104,6 +104,17 @@ export interface OutgoingReturned {
   note: string | null;
 }
 
+/** Xem trước hộp Cấp số (`GET .../actions/assign-number/preview`): số, ký hiệu mặc định và khoảng ngày ban hành (`YYYY-MM-DD`, múi giờ Việt Nam). */
+export interface OutgoingNumberPreview {
+  year: number;
+  number: number;
+  notation: string;
+  numberStr: string;
+  issuedDate: string;
+  minIssuedDate: string;
+  maxIssuedDate: string;
+}
+
 /** Thao tác người xem được làm lúc này và việc đang chờ; server tính cho từng người xem. */
 export interface OutgoingStepView {
   actions: OutgoingStepSlug[];

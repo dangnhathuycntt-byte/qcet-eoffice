@@ -27,6 +27,8 @@ export interface InstitutionProfile {
   logoUrl: string;
   /** Abbreviated name used in compact headers / layouts */
   abbreviatedName: string;
+  /** Chữ viết tắt tên cơ quan trong ký hiệu văn bản (NĐ 30/2020 Phụ lục III: `QĐ-CĐKTCNQN`, `CĐKTCNQN-QLĐT`) */
+  notationCode: string;
   /** English canonical institution name */
   englishName?: string;
   /** Domain name for institutional email and identity accounts */
@@ -59,6 +61,7 @@ export const INSTITUTION_CONFIG: Readonly<InstitutionProfile> = deepFreeze({
   website: "https://cdktcnqn.edu.vn",
   logoUrl: "/logo-qcet.png",
   abbreviatedName: "Trường CĐ Kỹ thuật Công nghệ Quy Nhơn",
+  notationCode: "CĐKTCNQN",
   englishName: "Quy Nhon College of Engineering and Technology",
   domain: "cdktcnqn.edu.vn",
 });

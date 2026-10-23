@@ -54,7 +54,14 @@ import {
   isUnitLeaderPosition,
 } from "@/server/authorization/authorization-engine";
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@qcet/shared/config/institution";
-import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
+import { getNextRegistrationNumber, peekNextRegistrationNumber } from "@/server/documents/numbering-engine";
+import {
+  assertValidNotation,
+  currentNumberingYear,
+  issuedDateBounds,
+  resolveDefaultNotation,
+  resolveIssuedDate,
+} from "@/server/documents/outgoing-numbering";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
 import { formatReturnedNote, type OutgoingStepSlug } from "@qcet/shared/domain/documents/outgoing-steps";
 import { listContentReviewers } from "@/server/documents/outgoing-reviewers";
@@ -419,7 +426,7 @@ export class OutgoingDocumentService {
           originalNumber: `DRAFT-${documentYear}-${Math.abs(regNumber)}`,
           issuedDate: now,
           issuingAuthority: INSTITUTION_CONFIG.issuingAuthority,
-          category: input.category || "Quyết định",
+          category: input.category || "Công văn",
           summary,
           urgency: input.urgency || DocumentUrgency.THUONG,
           securityLevel: input.securityLevel || DocumentSecurityLevel.THUONG,
@@ -1146,7 +1153,15 @@ export class OutgoingDocumentService {
     }
 
     const now = new Date();
-    const documentYear = now.getFullYear();
+    const documentYear = currentNumberingYear();
+    // Ngày ban hành và ký hiệu kiểm trước khi chiếm bước, để lỗi nhập liệu không tiêu thụ số trong dãy.
+    const issuedDay = resolveIssuedDate(input.issuedDate, issuedDateBounds(existing.authorizedSignedAt as Date));
+    const customNotation = input.codeNotation?.trim();
+    // Ký hiệu chỉ dùng để ghép số; số ghi tường minh (`outgoingNumberStr`) thì không dùng đến nên không cần kiểm
+    if (customNotation && !input.outgoingNumberStr) assertValidNotation(customNotation);
+    const notation =
+      customNotation ||
+      (await resolveDefaultNotation({ category: existing.document.category, draftingUnitId: existing.draftingUnitId }));
 
     return prisma.$transaction(async (tx) => {
       // Claim the transition before allocating a number. The conditional update locks
@@ -1186,7 +1201,6 @@ export class OutgoingDocumentService {
         tx
       );
 
-      const notation = input.codeNotation || "QĐ-CĐKTCNQN";
       const outgoingNumberStr = input.outgoingNumberStr || `${allocatedNumber}/${notation}`;
 
       const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
@@ -1205,7 +1219,9 @@ export class OutgoingDocumentService {
         data: {
           originalNumber: outgoingNumberStr,
           registrationNumber: allocatedNumber,
-          issuedDate: input.issuedDate ? new Date(input.issuedDate) : now,
+          // Số thuộc dãy của năm cấp số, nên bản ghi mang năm đó dù dự thảo tạo từ năm trước
+          documentYear,
+          issuedDate: issuedDay ? new Date(issuedDay) : now,
           status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.NUMBERED),
           securityLevel: input.securityLevel || existing.document.securityLevel,
           urgency: input.urgency || existing.document.urgency,
@@ -1242,6 +1258,44 @@ export class OutgoingDocumentService {
 
       return updatedWorkflow;
     });
+  }
+
+  /**
+   * Xem trước hộp Cấp số: số sẽ cấp, ký hiệu mặc định theo loại và đơn vị soạn, khoảng ngày ban hành. Qua cùng cổng với
+   * lệnh cấp số nên chỉ người cấp số được xem; không ghi gì. Số có thể lệch nếu người khác cấp trước.
+   */
+  static async previewAssignNumber(
+    documentId: string,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser
+  ) {
+    const user = await resolveUserContext(actor);
+    const existing = await prisma.documentOutgoingWorkflow.findUnique({
+      where: { documentId },
+      include: { document: true },
+    });
+    if (!existing) throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
+    if (!existing.authorizedSignedAt || existing.status !== OutgoingDocumentStatus.AUTHORIZED_SIGN) {
+      throw new InvalidTransitionError("Chỉ cấp số cho văn bản đã ký chức danh và chưa được cấp số.");
+    }
+    await runOutgoingStepGate("assign-number", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
+
+    const year = currentNumberingYear();
+    const [number, notation] = await Promise.all([
+      peekNextRegistrationNumber(DocumentType.VAN_BAN_DI, year),
+      resolveDefaultNotation({ category: existing.document.category, draftingUnitId: existing.draftingUnitId }),
+    ]);
+    const bounds = issuedDateBounds(existing.authorizedSignedAt);
+    return {
+      year,
+      number,
+      notation,
+      numberStr: `${number}/${notation}`,
+      issuedDate: bounds.max,
+      minIssuedDate: bounds.min,
+      maxIssuedDate: bounds.max,
+    };
   }
 
   /**

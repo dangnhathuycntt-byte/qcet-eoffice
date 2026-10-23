@@ -67,6 +67,24 @@ export async function simulateAtomicNumbering(
 }
 
 /**
+ * Số mà lần `getNextRegistrationNumber` kế tiếp sẽ cấp cho (loại, năm), không ghi gì: dùng để xem trước. Cùng công thức
+ * với engine (số lớn hơn giữa dãy và văn bản đã có, cộng một), nên khớp số cấp thật trừ khi người khác cấp trước.
+ */
+export async function peekNextRegistrationNumber(type: DocumentType, year: number, client?: any): Promise<number> {
+  const db = client || defaultPrisma;
+  const normalizedType = type === "inbox" ? "VAN_BAN_DEN" : type === "outbox" ? "VAN_BAN_DI" : type === "submission" ? "TO_TRINH_NOI_BO" : type;
+  const [sequence, maxDocument] = await Promise.all([
+    db.documentNumberSequence.findUnique({ where: { type_year: { type: normalizedType, year } }, select: { lastNumber: true } }),
+    db.document.findFirst({
+      where: { type: normalizedType, documentYear: year, registrationNumber: { gt: 0 } },
+      orderBy: { registrationNumber: "desc" },
+      select: { registrationNumber: true },
+    }),
+  ]);
+  return Math.max(sequence?.lastNumber ?? 0, maxDocument?.registrationNumber ?? 0) + 1;
+}
+
+/**
  * Atomic auto-increment numbering engine backed by Prisma DocumentNumberSequence.
  * Guarantees consecutive, non-repeating numbers per (type, year).
  * Handles both root PrismaClient and interactive TransactionClient (where $transaction is undefined).

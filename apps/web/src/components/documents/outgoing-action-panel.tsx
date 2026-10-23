@@ -26,6 +26,7 @@ import { OUTGOING_STEP_ACTIONS } from "@qcet/shared/domain/documents/outgoing-st
 import { readApiErrorMessage } from "@/lib/documents/api-error";
 import { refreshWorkQueue } from "@/lib/documents/work-queue";
 import { OutgoingSubmitDialog } from "./outgoing-submit-dialog";
+import { OutgoingAssignNumberDialog } from "./outgoing-assign-number-dialog";
 import { formatDateTime } from "@/lib/format";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -153,6 +154,7 @@ export function OutgoingActionPanel({
   const [success, setSuccess] = React.useState<string | null>(null);
   const [confirmAction, setConfirmAction] = React.useState<ActionDef | null>(null);
   const [submitOpen, setSubmitOpen] = React.useState(false);
+  const [assignNumberOpen, setAssignNumberOpen] = React.useState(false);
   const [note, setNote] = React.useState("");
 
   const actions = (step?.actions ?? []).map(actionDef);
@@ -194,6 +196,11 @@ export function OutgoingActionPanel({
     // Trình duyệt có hộp riêng: chọn người duyệt và lời nhắn thay cho hộp xác nhận trần
     if (actionDef.action === "submit-content-review") {
       setSubmitOpen(true);
+      return;
+    }
+    // Cấp số có hộp riêng: xem trước số, sửa ký hiệu và ngày ban hành
+    if (actionDef.action === "assign-number") {
+      setAssignNumberOpen(true);
       return;
     }
     if (actionDef.requiresNote) {
@@ -268,6 +275,18 @@ export function OutgoingActionPanel({
           <span>{success}</span>
         </div>
       )}
+
+      <OutgoingAssignNumberDialog
+        open={assignNumberOpen}
+        onOpenChange={setAssignNumberOpen}
+        documentId={documentId}
+        onAssigned={(numberStr) => {
+          setSuccess(numberStr ? `Đã cấp số ${numberStr}.` : "Đã cấp số.");
+          onActionSuccess?.();
+          void refreshWorkQueue({ force: true });
+          router.refresh();
+        }}
+      />
 
       <OutgoingSubmitDialog
         open={submitOpen}
