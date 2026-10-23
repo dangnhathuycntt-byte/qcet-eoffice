@@ -48,6 +48,7 @@ import { ActionQueueShell } from "./action-queue-shell";
 import { ActiveFilterBreadcrumb, countActiveFilters, type ActiveFilterValues } from "./components/active-filter-breadcrumb";
 import { TaskTabPills } from "@/components/tasks/task-tab-pills";
 import { ModularCascadingTaskTable } from "@/components/tasks/table/modular-cascading-task-table";
+import { useHiddenTaskIds, withoutHiddenTasks } from "@/lib/tasks/pending-task-archive";
 import type { SortDirection, TableColumnVisibility, TaskSortField } from "@/components/tasks/table/types";
 import { getNextSortDirection } from "@/components/tasks/table/hooks/use-task-table-state";
 import { DEFAULT_DISPLAY_PROPERTIES } from "@/components/tasks/table/components/task-table-toolbar";
@@ -635,7 +636,12 @@ function UnifiedAdaptiveWorkspaceInner({
     };
   }, [controlledTasks, initialTasks]);
 
-  const tasks = controlledTasks !== undefined ? controlledTasks : internalTasks;
+  // Nhiệm vụ vừa xóa còn trong cửa sổ Hoàn tác (chưa lưu trữ ở máy chủ) ẩn khỏi mọi danh sách và số đếm ở đây
+  const hiddenTaskIds = useHiddenTaskIds();
+  const tasks = React.useMemo(
+    () => withoutHiddenTasks(controlledTasks !== undefined ? controlledTasks : internalTasks, hiddenTaskIds),
+    [controlledTasks, internalTasks, hiddenTaskIds],
+  );
 
   // Determine default scope based on user role or explicit props
   const defaultScope: WorkspaceScope = React.useMemo(() => {
@@ -2109,8 +2115,9 @@ function UnifiedAdaptiveWorkspaceInner({
       data-slot="unified-adaptive-workspace"
       data-active-scope={activeScope}
       className={cn(
-        // Điện thoại: danh sách sát ngay dưới hàng chip như Linear (4px), từ md giữ 16px
-        "space-y-4 max-md:space-y-1 pb-2 sm:pb-8 md:[--task-table-sticky-top:88px]",
+        // Điện thoại: danh sách sát ngay dưới hàng chip như Linear (4px), từ md giữ 16px.
+        // `empty-fill` (cả hai khung bên dưới): trang trống thì khối trống giãn hết vùng cuộn và đứng giữa, như các trang danh sách khác
+        "empty-fill space-y-4 max-md:space-y-1 pb-2 sm:pb-8 md:[--task-table-sticky-top:88px]",
         className
       )}
     >
@@ -2415,11 +2422,11 @@ function UnifiedAdaptiveWorkspaceInner({
       ) : (
         <div
           data-slot="task-workspace-canvas"
-          className="w-full space-y-2.5 min-w-0"
+          className="empty-fill w-full space-y-2.5 min-w-0"
         >
           <div
             data-slot="full-width-task-canvas"
-            className="w-full space-y-1 min-w-0"
+            className="empty-fill w-full space-y-1 min-w-0"
           >
             {/* Unassigned Department State or Empty State or Table/Kanban */}
           {activeScope === "unit" && isUnassigned ? (
@@ -2463,7 +2470,7 @@ function UnifiedAdaptiveWorkspaceInner({
           <aside
             data-slot="action-queue-drawer"
             className={cn(
-              "fixed inset-y-0 right-0 z-40 flex h-full w-full sm:w-[480px] sm:max-w-[480px] flex-col border-l border-border/60 bg-card/98 backdrop-blur-xl shadow-2xl transition-transform duration-300 !m-0",
+              "fixed inset-y-0 right-0 z-40 flex h-full w-full sm:w-[480px] sm:max-w-[480px] flex-col border-l border-border/60 bg-card shadow-sheet transition-transform duration-300 !m-0",
               isActionQueueOpen ? "translate-x-0" : "translate-x-full pointer-events-none invisible"
             )}
             role="region"

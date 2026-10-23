@@ -576,7 +576,8 @@ export function CreateTaskModal({
                 className={cn(
                   "relative flex w-full shrink-0 basis-full max-w-[920px] flex-col overflow-hidden bg-background",
                   "lg:[transition:max-width_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,margin_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,border-radius_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms,box-shadow_220ms_cubic-bezier(0.43,0.07,0.59,0.94)_80ms] motion-reduce:lg:[transition:none]",
-                  // Màn lg hẹp (khung không nới đủ 1316px): thẻ co lại chừa chỗ panel, tính theo viewport để không co theo khung đang nới
+                  // Màn lg hẹp (khung không nới đủ 1316px): thẻ co lại chừa chỗ panel, tính theo viewport để không co theo khung đang nới.
+                  // design-lint-ignore no-arbitrary-shadow: vòng viền trong 0,5px + bóng thấp của Linear, chuyển động cùng khung khi mở Agent
                   agentOpen && "lg:m-2 lg:max-w-[min(920px,calc(100vw-420px))] lg:rounded-md lg:shadow-[inset_0_0_0_0.5px_rgb(0_0_0/0.09),0_3px_6px_-2px_rgb(0_0_0/0.02),0_1px_1px_0_rgb(0_0_0/0.04)]",
                 )}
               >

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useListMotion } from "@/hooks/use-list-motion";
 
 /** Cột thẻ 240px cách 16px như Google Keep; không đủ chỗ cho hai cột (điện thoại) thì hai cột co giãn cách 8px. */
 const COLUMN_WIDTH = 240;
@@ -47,6 +48,8 @@ export function NoteMasonry<T extends { id: string }>({
   renderItem: (item: T) => React.ReactNode;
 }) {
   const containerRef = React.useRef<HTMLDivElement>(null);
+  // Thẻ tự FLIP khi đổi chỗ (ở dưới): xóa hoặc thêm thẻ chỉ cần mờ đi / hiện dần, không để cơ chế chung trượt các thẻ sau
+  const listMotionRef = useListMotion<HTMLUListElement>({ flip: false });
   const itemRefs = React.useRef(new Map<string, HTMLElement>());
   const moveRefs = React.useRef(new Map<string, HTMLElement>());
   const lastPoints = React.useRef(new Map<string, Point>());
@@ -161,7 +164,7 @@ export function NoteMasonry<T extends { id: string }>({
           <span className="motion-safe:animate-[fade-in_200ms_ease-out]">{heading.text}</span>
         </p>
       ))}
-      <ul aria-label={label} className="absolute inset-0">
+      <ul ref={listMotionRef} aria-label={label} className="absolute inset-0">
         {placed.map(({ item, x, y }) => (
           <li
             key={item.id}

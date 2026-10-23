@@ -6,8 +6,8 @@ import { Building2, UserCheck } from "lucide-react";
 /** Đơn vị lấy từ phân công vị trí việc làm do quản trị viên gán, người dùng không tự chọn được nên trạng thái này không có nút sửa. */
 export function UnassignedDepartmentState() {
   return (
-    <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-border/70 bg-card/80 backdrop-blur-xs my-6 max-w-xl mx-auto shadow-xs animate-in fade-in-50 duration-200">
-      <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 mb-4 shadow-2xs">
+    <div className="flex flex-col items-center justify-center p-8 sm:p-12 text-center rounded-2xl border border-border/70 bg-card/80 backdrop-blur-xs my-6 max-w-xl mx-auto shadow-low animate-in fade-in-50 duration-200">
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary border border-primary/20 mb-4 shadow-low">
         <Building2 className="size-7" />
       </div>
 

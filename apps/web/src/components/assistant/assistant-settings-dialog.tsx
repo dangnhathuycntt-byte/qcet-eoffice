@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { DialogFooter, DialogForm, FieldError, StandardDialog } from "@/components/ui/dialog";
 import { useFeedback } from "@/components/ui/feedback-layer";
+import { showUndoToast } from "@/components/ui/undo-toast";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -34,6 +35,7 @@ import {
   updateSkillRequest,
 } from "@/components/assistant/assistant-client";
 import { assistantSkillStore, useAssistantSkills } from "@/components/assistant/use-assistant-skills";
+import { MotionUl } from "@/components/motion/motion-list";
 
 const SAVE_FAILED = "Chưa lưu được. Thầy/Cô thử lại.";
 const LOAD_FAILED = "Chưa tải được cài đặt Trợ lý. Thầy/Cô thử lại sau.";
@@ -231,15 +233,26 @@ function MemorySettings() {
     }
   };
 
-  const remove = async (id: string) => {
-    const previous = memories;
+  // Xóa có Hoàn tác (không hộp xác nhận): mục ẩn ngay, yêu cầu xóa đi khi toast đóng (`ui/undo-toast`)
+  const remove = (id: string) => {
+    const index = (memories ?? []).findIndex((item) => item.id === id);
+    if (index < 0) return;
+    const memory = (memories ?? [])[index];
     setMemories((prev) => (prev ?? []).filter((item) => item.id !== id));
-    try {
-      await deleteMemoryRequest(id);
-    } catch (failure) {
-      setMemories(previous);
-      showToast({ variant: "error", message: assistantErrorText(failure, "Chưa xóa được ghi nhớ. Thầy/Cô thử lại.") });
-    }
+    showUndoToast({
+      message: `Đã xóa ghi nhớ “${memory.content.length > 40 ? `${memory.content.slice(0, 40)}…` : memory.content}”`,
+      restore: () =>
+        setMemories((prev) => {
+          if (!prev || prev.some((item) => item.id === id)) return prev;
+          const next = [...prev];
+          next.splice(Math.min(index, next.length), 0, memory);
+          return next;
+        }),
+      commit: async () => {
+        await deleteMemoryRequest(id);
+      },
+      onError: (failure) => showToast({ variant: "error", message: assistantErrorText(failure, "Chưa xóa được ghi nhớ. Thầy/Cô thử lại.") }),
+    });
   };
 
   if (error) return <InlineAlert variant="error">{error}</InlineAlert>;
@@ -254,7 +267,7 @@ function MemorySettings() {
       {memories.length === 0 ? (
         <p className="text-xs text-muted-foreground">Chưa có ghi nhớ.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-border/60 rounded-lg border border-border">
+        <MotionUl className="flex flex-col divide-y divide-border/60 rounded-lg border border-border">
           {memories.map((memory) => (
             <li key={memory.id} className="flex min-h-10 items-center gap-2 px-3 py-1.5">
               <span className="min-w-0 flex-1 break-words text-compact text-foreground">{memory.content}</span>
@@ -271,7 +284,7 @@ function MemorySettings() {
               </Button>
             </li>
           ))}
-        </ul>
+        </MotionUl>
       )}
       <div className="flex items-center gap-2">
         <label htmlFor={inputId} className="sr-only">
@@ -305,14 +318,17 @@ function SkillSettings() {
   const skills = useAssistantSkills(true);
   const [editing, setEditing] = React.useState<AssistantSkillDTO | "new" | null>(null);
 
-  const remove = async (skill: AssistantSkillDTO) => {
+  // Xóa có Hoàn tác (không hộp xác nhận): kỹ năng ẩn ngay ở mọi nơi dùng store, yêu cầu xóa đi khi toast đóng (`ui/undo-toast`)
+  const remove = (skill: AssistantSkillDTO) => {
     assistantSkillStore.remove(skill.id);
-    try {
-      await deleteSkillRequest(skill.id);
-    } catch (failure) {
-      assistantSkillStore.upsert(skill);
-      showToast({ variant: "error", message: assistantErrorText(failure, "Chưa xóa được kỹ năng. Thầy/Cô thử lại.") });
-    }
+    showUndoToast({
+      message: `Đã xóa kỹ năng “${skill.name.length > 40 ? `${skill.name.slice(0, 40)}…` : skill.name}”`,
+      restore: () => assistantSkillStore.upsert(skill),
+      commit: async () => {
+        await deleteSkillRequest(skill.id);
+      },
+      onError: (failure) => showToast({ variant: "error", message: assistantErrorText(failure, "Chưa xóa được kỹ năng. Thầy/Cô thử lại.") }),
+    });
   };
 
   if (editing) {
@@ -333,7 +349,7 @@ function SkillSettings() {
       ) : skills.length === 0 ? (
         <p className="text-xs text-muted-foreground">Chưa có kỹ năng.</p>
       ) : (
-        <ul className="flex flex-col divide-y divide-border/60 rounded-lg border border-border">
+        <MotionUl className="flex flex-col divide-y divide-border/60 rounded-lg border border-border">
           {skills.map((skill) => (
             <li key={skill.id} className="flex min-h-12 items-center gap-2 px-3 py-1.5">
               <div className="flex min-w-0 flex-1 flex-col">
@@ -352,7 +368,7 @@ function SkillSettings() {
               </Button>
             </li>
           ))}
-        </ul>
+        </MotionUl>
       )}
       <div className="flex justify-end">
         <Button size="sm" variant="outline" onClick={() => setEditing("new")}>

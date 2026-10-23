@@ -7,6 +7,7 @@ import { TaskIconFilter, TaskIconSearch } from "@qcet/shared/lib/icons/task-icon
 import { cn } from "@/lib/utils";
 import { propertyMotionStyle, propertyPopupClassName } from "@/components/ui/property-control-styles";
 import { Pressable } from "@/components/ui/pressable";
+import { RAISED_RING_CLASS } from "@/components/ui/button";
 import { fieldFocusRingClass, focusRingClass } from "@/components/ui/focus-ring";
 import { useIsPhone } from "@/hooks/use-is-phone";
 import {
@@ -25,11 +26,14 @@ import {
   MenuTrigger,
 } from "@/components/ui/menu";
 
-/** Nút icon trên thanh công cụ danh sách (tìm, bộ lọc, hiển thị); icon 16px như icon sidebar, nơi gọi truyền cỡ nào cũng vậy */
+/**
+ * Nút icon trên thanh công cụ danh sách (tìm, bộ lọc, hiển thị): tròn 28px, nút phụ của Linear (vòng 0,5px thay viền, bóng thấp);
+ * icon 16px như icon sidebar, nơi gọi truyền cỡ nào cũng vậy.
+ */
 export function listToolbarIconButtonClass(active = false) {
   return cn(
-    "inline-flex size-7 max-md:size-8 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border px-0 text-xs font-medium transition-colors touch-manipulation [&_svg]:size-4",
-    active ? "border-border bg-accent/60 text-foreground hover:bg-accent" : "border-border/80 bg-background text-foreground hover:bg-accent"
+    `inline-flex size-7 max-md:size-8 shrink-0 cursor-pointer select-none items-center justify-center rounded-full border-0 px-0 text-xs font-medium transition-colors touch-manipulation [&_svg]:size-4 ${RAISED_RING_CLASS}`,
+    active ? "bg-accent/60 text-foreground hover:bg-accent" : "bg-background text-foreground hover:bg-accent"
   );
 }
 
@@ -37,9 +41,12 @@ export function listToolbarIconButtonClass(active = false) {
 export const LIST_TOOLBAR_SEARCH_COLLAPSED = "w-[140px] sm:w-[180px]";
 export const LIST_TOOLBAR_SEARCH_EXPANDED = "w-[200px] sm:w-[240px]";
 
-/** Nút chính trên thanh công cụ (Tạo việc, Soạn văn bản) */
+/**
+ * Nút tạo mới ở góc phải thanh công cụ (Tạo việc, Tạo cuộc họp, Soạn văn bản) như nút "New issue" của Linear (đo 22/10/2026):
+ * viên thuốc 28px, nền trắng, vòng 0,5px thay viền và bóng thấp, đệm 0 10px 0 8px.
+ */
 export const listToolbarPrimaryButtonClass =
-  `inline-flex h-7 items-center justify-center gap-1.5 rounded-md border border-border/80 bg-background hover:bg-accent text-foreground px-2.5 text-xs font-medium transition-colors shadow-2xs outline-none ${focusRingClass} disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation`;
+  `inline-flex h-7 items-center justify-center gap-1.5 rounded-full border-0 bg-background hover:bg-accent text-foreground pl-2 pr-2.5 text-xs font-medium transition-colors ${RAISED_RING_CLASS} outline-none ${focusRingClass} disabled:opacity-50 disabled:pointer-events-none cursor-pointer shrink-0 touch-manipulation`;
 
 export interface ListToolbarSearchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
   value: string;
@@ -113,7 +120,7 @@ export const ListToolbarSearch = React.forwardRef<HTMLInputElement, ListToolbarS
           onBlur?.(e);
         }}
         className={cn(
-          `h-8 sm:h-7 w-full rounded-full border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-faint shadow-2xs hover:border-border outline-none ${fieldFocusRingClass} focus-visible:-outline-offset-1 transition-colors`,
+          `h-8 sm:h-7 w-full rounded-full border border-border/60 bg-background pl-8 pr-8 text-base sm:text-xs text-ellipsis text-foreground placeholder:text-faint shadow-low hover:border-border outline-none ${fieldFocusRingClass} focus-visible:-outline-offset-1 transition-colors`,
           className
         )}
         {...inputProps}

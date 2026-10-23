@@ -1009,7 +1009,7 @@ export function TaskDetailPage({
     <ProgressDialog.Root open={isProgressModalOpen} onOpenChange={setIsProgressModalOpen}>
       <ProgressDialog.Portal keepMounted={isProgressModalOpen}>
         <ProgressDialog.Backdrop className="fixed inset-0 z-50 bg-overlay transition-opacity duration-150 data-[starting-style]:opacity-0 data-[ending-style]:opacity-0" />
-        <ProgressDialog.Popup className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 outline-none rounded-2xl border border-border bg-popover p-5 shadow-xl motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
+        <ProgressDialog.Popup className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 outline-none rounded-2xl border border-border bg-popover p-5 shadow-dialog motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95">
           <div className="flex items-center justify-between border-b border-border/50 pb-3">
             <ProgressDialog.Title className="text-sm font-semibold text-foreground">Cập nhật tiến độ nhiệm vụ</ProgressDialog.Title>
             <ProgressDialog.Close

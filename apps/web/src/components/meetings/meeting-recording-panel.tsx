@@ -38,6 +38,7 @@ import { daysUntil } from "@/lib/format/relative-date";
 import { useRuntimeFeature } from "@/lib/runtime-features";
 import { cn } from "@/lib/utils";
 import { formatDisplayDate } from "@qcet/shared/lib/format/date";
+import { MotionUl } from "@/components/motion/motion-list";
 
 const POLL_MS = 4000;
 /** Ghi trực tiếp: mỗi 100 ms một cột sóng (trôi 50px mỗi giây như Ghi âm của iOS). */
@@ -726,7 +727,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, 
         )}
 
         {recordings.length > 0 && (
-          <ul className={cn("divide-y divide-border/40", live && "border-t border-border/40")}>
+          <MotionUl className={cn("divide-y divide-border/40", live && "border-t border-border/40")}>
             {recordings.map((recording) => (
               <RecordingRow
                 key={recording.id}
@@ -746,7 +747,7 @@ export function MeetingRecordingPanel({ meetingId, onUseAsMinutes, minutesHint, 
                 <div className="pl-9">{footer(recording)}</div>
               </RecordingRow>
             ))}
-          </ul>
+          </MotionUl>
         )}
 
         {dragging && (

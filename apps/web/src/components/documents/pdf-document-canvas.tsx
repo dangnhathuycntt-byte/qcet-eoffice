@@ -420,7 +420,7 @@ export default function PdfDocumentCanvas({
                     data-page-number={index + 1}
                     data-rendered={inWindow ? "true" : "false"}
                     style={{ height, width: pageWidth }}
-                    className="shrink-0 overflow-hidden rounded-sm bg-card shadow-xs"
+                    className="shrink-0 overflow-hidden rounded-sm bg-card shadow-low"
                   >
                     {inWindow ? (
                       <Page

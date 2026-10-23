@@ -1190,7 +1190,7 @@ export function UnifiedTaskToolbar({
                         className={cn(
                           "inline-flex items-center justify-center rounded px-1.5 py-0.2 text-xs font-mono tabular-nums font-semibold",
                           isActive
-                            ? "bg-background text-foreground border border-border/60 shadow-2xs"
+                            ? "bg-background text-foreground border border-border/60 shadow-low"
                             : "bg-muted text-muted-foreground"
                         )}
                       >

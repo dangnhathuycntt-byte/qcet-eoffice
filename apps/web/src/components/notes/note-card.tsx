@@ -38,7 +38,7 @@ export function NoteCard({
   const actionClass = "absolute opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100";
   const hasText = Boolean(title) || lines.length > 0;
   return (
-    <div className="group relative rounded-lg border border-border bg-card transition-shadow hover:shadow-sm">
+    <div className="group relative rounded-lg border border-border bg-card transition-shadow hover:shadow-low">
       {/* Chừa 36px dưới cho nút xóa như thanh công cụ của thẻ Keep */}
       <Pressable onClick={onOpen} className="block w-full overflow-hidden rounded-lg pb-9 text-left focus-visible:ring-inset">
         {images.length > 0 && (
@@ -88,7 +88,7 @@ export function NoteCard({
         aria-label={item.pinned ? "Bỏ ghim ghi chú" : "Ghim ghi chú"}
         aria-pressed={item.pinned}
         onClick={onTogglePin}
-        className={cn(actionClass, "right-1.5 top-1.5", images.length > 0 && "bg-card/90 shadow-sm hover:bg-card")}
+        className={cn(actionClass, "right-1.5 top-1.5", images.length > 0 && "bg-card/90 shadow-low hover:bg-card")}
       >
         {item.pinned ? <PinOff /> : <Pin />}
       </Button>

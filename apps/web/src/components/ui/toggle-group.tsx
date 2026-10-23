@@ -41,7 +41,7 @@ const iconOnlySizeClass: Record<ToggleSize, string> = {
 };
 
 const itemVariantClass: Record<ToggleVariant, string> = {
-  segmented: "data-[pressed]:bg-card data-[pressed]:text-foreground data-[pressed]:shadow-2xs",
+  segmented: "data-[pressed]:bg-card data-[pressed]:text-foreground data-[pressed]:shadow-low",
   outline: "border border-border/80 bg-background hover:bg-accent data-[pressed]:bg-selected data-[pressed]:text-foreground",
   soft: "hover:bg-accent data-[pressed]:bg-selected data-[pressed]:text-foreground",
 };

@@ -219,11 +219,11 @@ export function PWASyncStatusBar({
   }
 
   const variantStyles = {
-    online: "bg-white border-emerald-300 text-emerald-950 shadow-sm",
-    syncing: "bg-white border-sky-300 text-sky-950 shadow-sm",
-    degraded: "bg-white border-warning/40 text-warning shadow-sm",
-    offline: "bg-white border-border text-foreground shadow-sm",
-    conflict: "bg-white border-destructive/40 text-destructive shadow-sm",
+    online: "bg-white border-emerald-300 text-emerald-950 shadow-low",
+    syncing: "bg-white border-sky-300 text-sky-950 shadow-low",
+    degraded: "bg-white border-warning/40 text-warning shadow-low",
+    offline: "bg-white border-border text-foreground shadow-low",
+    conflict: "bg-white border-destructive/40 text-destructive shadow-low",
   };
 
   const badgeStyles = {
@@ -240,7 +240,7 @@ export function PWASyncStatusBar({
         role="status"
         aria-live="polite"
         className={cn(
-          "fixed z-50 transition-all duration-300 pointer-events-none",
+          "fixed z-50 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 pointer-events-none",
           "bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] left-1/2 -translate-x-1/2 sm:bottom-6 md:bottom-[calc(1.5rem+var(--app-statusbar,0px))] max-w-[94vw] sm:max-w-md w-full",
           className
         )}

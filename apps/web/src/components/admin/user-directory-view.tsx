@@ -138,10 +138,11 @@ export function UserDirectoryView() {
             <Table density="two-line" aria-busy={loading || undefined} className="min-w-[680px] table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[34%]">Họ tên</TableHead>
-                  <TableHead className="w-[22%]">Chức vụ</TableHead>
-                  <TableHead className="w-[26%]">Đơn vị</TableHead>
-                  <TableHead className="w-[18%]">Vai trò</TableHead>
+                  {/* Cột thuộc tính rộng cố định, cột tên lấy phần còn lại (như bảng /org) */}
+                  <TableHead>Họ tên</TableHead>
+                  <TableHead className="w-[200px]">Chức vụ</TableHead>
+                  <TableHead className="w-[248px]">Đơn vị</TableHead>
+                  <TableHead className="w-[136px]">Vai trò</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody className={loading ? "opacity-60" : undefined}>
@@ -149,7 +150,7 @@ export function UserDirectoryView() {
                   <TableRow key={user.id}>
                     <TableCell>
                       <div className="flex min-w-0 items-center gap-2.5">
-                        <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="sm" />
+                        <UserAvatar name={user.name} avatarUrl={user.avatarUrl} size="md" />
                         <div className="flex min-w-0 flex-col">
                           <span className="truncate font-medium">{user.name}</span>
                           <span className="truncate text-xs text-muted-foreground">{user.email}</span>

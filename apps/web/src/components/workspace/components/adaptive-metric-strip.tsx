@@ -216,7 +216,7 @@ export function AdaptiveMetricStrip({
     <div
       data-slot="adaptive-metric-strip"
       className={cn(
-        "grid grid-cols-2 gap-2.5 p-1.5 rounded-xl bg-muted/40 border border-border/70 shadow-2xs",
+        "grid grid-cols-2 gap-2.5 p-1.5 rounded-xl bg-muted/40 border border-border/70 shadow-low",
         className
       )}
     >
@@ -246,7 +246,7 @@ export function AdaptiveMetricStrip({
                 : undefined
             }
             className={cn(
-              "p-3 rounded-lg bg-card border border-border/70 flex flex-col justify-between space-y-1.5 shadow-2xs transition-colors",
+              "p-3 rounded-lg bg-card border border-border/70 flex flex-col justify-between space-y-1.5 shadow-low transition-colors",
               isInteractive &&
                 "cursor-pointer hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             )}

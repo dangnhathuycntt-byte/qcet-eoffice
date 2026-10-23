@@ -59,7 +59,7 @@ export function DevLoginPanel({ returnTo }: { returnTo: string }) {
   return (
     <aside
       aria-label="Đăng nhập thử theo vai trò (chỉ môi trường phát triển)"
-      className="fixed bottom-4 left-4 z-20 w-72 space-y-2 rounded-xl border border-border bg-card p-3 text-xs shadow-lg"
+      className="fixed bottom-4 left-4 z-20 w-72 space-y-2 rounded-xl border border-border bg-card p-3 text-xs shadow-menu"
     >
       <p className="font-semibold text-foreground">Đăng nhập thử · chỉ môi trường dev</p>
       <Select

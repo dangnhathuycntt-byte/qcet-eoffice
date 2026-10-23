@@ -15,6 +15,7 @@ import { AgentModelPicker } from "@/components/agent-chat/agent-model-picker";
 import { AttachmentCard, type ChatAttachment } from "@/components/agent-chat/agent-attachments";
 import { AGENT_COMPOSER_CLASS, AGENT_COMPOSER_INPUT_CLASS, AgentDropOverlay } from "@/components/agent-chat/agent-chat-parts";
 import { TASK_AGENT_ATTACHMENT_ACCEPT } from "@qcet/shared/domain/tasks/task-agent-attachments";
+import { MotionDiv } from "@/components/motion/motion-list";
 
 export interface AssistantComposerProps {
   value: string;
@@ -149,11 +150,11 @@ export function AssistantComposer({
         }}
       >
         {attachments.length > 0 ? (
-          <div data-image-viewer-group="" className="flex flex-wrap gap-1.5 px-1 pt-1">
+          <MotionDiv data-image-viewer-group="" className="flex flex-wrap gap-1.5 px-1 pt-1">
             {attachments.map((a) => (
               <AttachmentCard key={a.id} attachment={a} compact onRemove={onRemoveAttachment ? () => onRemoveAttachment(a.id) : undefined} />
             ))}
-          </div>
+          </MotionDiv>
         ) : null}
         <label htmlFor={inputId} className="sr-only">
           Hỏi Trợ lý

@@ -14,7 +14,6 @@ import {
   updateTaskPriority,
   updateTaskAssignee,
   updateTaskDueDate,
-  deleteTask,
   type TaskActionResult,
 } from "@/lib/tasks/task-actions";
 import { CORE_STATUS_OPTIONS } from "@qcet/shared/domain/tasks/display-config";
@@ -36,7 +35,7 @@ import {
 import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { AgentIcon } from "@/components/icons/agent-icon";
 import { VietnameseDayCalendar } from "@/components/ui/vietnamese-day-calendar";
-import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
+import { archiveTasksWithUndo } from "@/lib/tasks/pending-task-archive";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { usePersonnelList } from "@/hooks/use-personnel-list";
 import { getTaskUnitId } from "@qcet/shared/lib/tasks/task-unit";
@@ -235,7 +234,6 @@ export interface TaskContextMenuProps {
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => void | Promise<void>;
   onAssigneeChange?: (taskId: string, newAssigneeId: string, newAssigneeName: string) => void | Promise<void>;
   onDueDateChange?: (taskId: string, newDueDate: string) => void | Promise<void>;
-  onDeleteTask?: (taskId: string) => void | Promise<void>;
   availableAssignees?: Array<{ id: string; name: string; avatar?: string; department?: string }>;
 }
 
@@ -252,7 +250,6 @@ export function TaskContextMenu({
   onPriorityChange,
   onAssigneeChange,
   onDueDateChange,
-  onDeleteTask,
   availableAssignees: availableAssigneesProp,
 }: TaskContextMenuProps) {
   // Đơn vị nào giao việc đơn vị đó: chỉ liệt kê cán bộ thuộc đơn vị chủ trì của nhiệm vụ
@@ -292,8 +289,6 @@ export function TaskContextMenu({
     setActiveSubmenu((prev) => (mode === "open" ? name : prev === name ? null : name));
   }, []);
   const [calendarOpen, setCalendarOpen] = React.useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
-  const [isDeleting, setIsDeleting] = React.useState(false);
   const feedback = useFeedback();
   let router: ReturnType<typeof useRouter> | null = null;
   try {
@@ -308,8 +303,6 @@ export function TaskContextMenu({
     if (!isOpen) return;
     setActiveSubmenu(null);
     setCalendarOpen(false);
-    setShowDeleteConfirm(false);
-    setIsDeleting(false);
   }, [isOpen, position]);
 
   React.useEffect(() => {
@@ -440,40 +433,10 @@ export function TaskContextMenu({
     );
   };
 
+  // Hoàn tác thay hộp xác nhận (lib/tasks/pending-task-archive): ẩn ngay, chỉ gửi lưu trữ khi toast Hoàn tác đóng
   const handleDeleteTask = () => {
-    setShowDeleteConfirm(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    // Optimistic: remove từ UI ngay lập tức
-    window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId: task.id, optimistic: true } }));
-    setShowDeleteConfirm(false);
     onClose();
-    setIsDeleting(true);
-    try {
-      if (onDeleteTask) {
-        await onDeleteTask(task.id);
-      } else {
-        const result = await deleteTask(task.id, Number((task as any).version ?? 1) || 0);
-        if (!result.ok) {
-          // Rollback: trả task về danh sách
-          window.dispatchEvent(new CustomEvent("qcet:task-archive-rollback", { detail: { taskId: task.id } }));
-          feedback.notifyError(result.error || "Không thể xóa/hủy nhiệm vụ. Vui lòng thử lại.");
-          return;
-        }
-      }
-      feedback.notifySuccess("Đã lưu trữ 1 nhiệm vụ.");
-      // Confirm: refresh để sync server truth
-      window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId: task.id, optimistic: false } }));
-      router?.refresh();
-    } catch (err) {
-      window.dispatchEvent(new CustomEvent("qcet:task-archive-rollback", { detail: { taskId: task.id } }));
-      feedback.notifyError(
-        err instanceof Error ? err.message : "Không thể xóa/hủy nhiệm vụ. Vui lòng thử lại."
-      );
-    } finally {
-      setIsDeleting(false);
-    }
+    archiveTasksWithUndo([{ id: task.id, version: Number((task as any).version ?? 1) || 0 }], feedback, { onCommitted: () => router?.refresh() });
   };
 
   // Phím 0 = Không ưu tiên, 1–4 = Khẩn cấp…Thấp (như Linear)
@@ -509,7 +472,7 @@ export function TaskContextMenu({
 
   return (
     <>
-    <Menu.Root open={isOpen && !showDeleteConfirm} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Menu.Root open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
     <Menu.Portal>
     <Menu.Backdrop className={SHEET_BACKDROP_CLASS} />
     <Menu.Positioner className={cn("z-50", SHEET_POSITIONER_CLASS)}
@@ -682,7 +645,7 @@ export function TaskContextMenu({
               aria-label="Chọn ngày hoàn thành"
               className={cn(
                 submenuClass,
-                "w-56 rounded-lg border border-border/80 bg-popover p-2 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100 z-50",
+                "w-56 rounded-lg border border-border/80 bg-popover p-2 shadow-menu animate-in fade-in-0 zoom-in-95 duration-100 z-50",
                 "max-md:static! max-md:mt-1 max-md:w-full! max-md:animate-none max-md:border-0 max-md:p-0 max-md:shadow-none"
               )}
             >
@@ -721,19 +684,6 @@ export function TaskContextMenu({
     </Menu.Positioner>
     </Menu.Portal>
     </Menu.Root>
-
-
-      {/* Destructive Confirmation Dialog */}
-      <DestructiveConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => { setShowDeleteConfirm(false); setIsDeleting(false); }}
-        onConfirm={handleConfirmDelete}
-        title="Xóa nhiệm vụ?"
-        entityName={taskTitle}
-        description="sẽ được lưu trữ và ẩn khỏi danh sách."
-        irreversible
-        isConfirming={isDeleting}
-      />
     </>
   );
 }

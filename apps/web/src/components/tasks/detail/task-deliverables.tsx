@@ -11,6 +11,7 @@ import { formatDetailDate } from "@/lib/task-detail-helpers";
 import { isSafeUrl } from "@qcet/shared/lib/url-utils";
 import { cn } from "@/lib/utils";
 import { TaskAddPanel, TaskPanelActions } from "./task-add-chip";
+import { MotionUl } from "@/components/motion/motion-list";
 
 export interface TaskDeliverableItem {
   id: string;
@@ -137,7 +138,7 @@ export function TaskDeliverables({
         }
       />
 
-      <ul className="space-y-0.5">
+      <MotionUl className="space-y-0.5">
         {deliverables.map((item) => {
           const status = item.reviewStatus ? REVIEW_STATUS[item.reviewStatus] : undefined;
           const safeUrl = item.fileUrl && isSafeUrl(item.fileUrl) ? item.fileUrl : undefined;
@@ -176,7 +177,7 @@ export function TaskDeliverables({
             </li>
           );
         })}
-      </ul>
+      </MotionUl>
 
       {adding ? form : null}
     </section>

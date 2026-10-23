@@ -220,7 +220,7 @@ const ROW_TITLE_WIDTHS = ["58%", "44%", "66%", "50%"];
 function ClickScene({ action }: { action: string }) {
   return (
     <div className="absolute inset-0 text-xs [zoom:0.7]">
-      <div className="absolute inset-x-4 bottom-0 top-4 overflow-hidden rounded-t-xl bg-background shadow-xs">
+      <div className="absolute inset-x-4 bottom-0 top-4 overflow-hidden rounded-t-xl bg-background shadow-low">
         <div className="flex h-9 items-center justify-between border-b border-border/60 pl-3.5 pr-2">
           <span className="h-2 w-16 rounded-full bg-foreground/10" />
           <span className={cn("relative flex h-6 items-center gap-1 rounded-full px-2 font-medium text-foreground", STILL)} style={loop("onboarding-hint-press")}>

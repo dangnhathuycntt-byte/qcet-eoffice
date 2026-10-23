@@ -25,7 +25,7 @@ export function DocsHome() {
                   className="group flex h-full flex-col overflow-hidden rounded-lg border border-border/60 bg-foreground/[0.02] outline-none transition-colors hover:bg-foreground/[0.04] focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span aria-hidden className="flex h-28 items-start border-b border-border/60 p-4">
-                    <span className="flex size-9 items-center justify-center rounded-lg bg-background shadow-xs ring-1 ring-border/60">
+                    <span className="flex size-9 items-center justify-center rounded-lg bg-background shadow-low ring-1 ring-border/60">
                       <DocIcon name={page.icon} className="size-4.5 text-muted-foreground transition-colors group-hover:text-foreground" />
                     </span>
                   </span>

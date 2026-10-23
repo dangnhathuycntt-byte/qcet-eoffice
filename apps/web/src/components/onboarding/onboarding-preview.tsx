@@ -39,7 +39,7 @@ export function OnboardingPreview({ step, fullName, title, department, address, 
   const focusLabels = FOCUS_AREAS.filter((area) => focus.includes(area.id)).map((area) => area.label);
 
   return (
-    <div className="flex w-full max-w-[420px] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-xs">
+    <div className="flex w-full max-w-[420px] flex-col overflow-hidden rounded-2xl border border-border bg-background shadow-low">
       <div className="flex h-11 items-center gap-2 border-b border-border/60 px-4">
         <Sparkles className="size-3.5 text-muted-foreground" />
         <span className="text-compact font-medium">Trợ lý</span>

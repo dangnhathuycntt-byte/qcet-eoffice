@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import * as React from "react";
+import { readFileSync } from "node:fs";
 import { renderToString } from "react-dom/server";
 import { TaskEmptyState } from "../src/components/tasks/table/components/task-empty-state";
 
@@ -98,9 +99,20 @@ describe("TaskEmptyState", () => {
     const html = renderToString(React.createElement(TaskEmptyState, { ...props, activeFilterCount: 1 }));
     assert.ok(html.includes("Đang áp dụng 1 bộ lọc."));
     assert.ok(!html.includes("bộ lọc khác"));
-    assert.ok(html.includes("md:min-h-[calc(100dvh-15.5rem)]"), "có hàng bộ lọc thì chừa thêm chỗ để trang trống không cuộn");
-    const unfiltered = renderToString(React.createElement(TaskEmptyState, { activeFilterCount: 0 }));
-    assert.ok(unfiltered.includes("md:min-h-[calc(100dvh-13rem)]"));
+  });
+
+  it("giãn hết vùng cuộn bằng empty-fill như các trang danh sách khác, không tự chừa chiều cao theo màn hình", () => {
+    // Trước 23/10/2026 trang Nhiệm vụ chừa `calc(100dvh-13rem)` riêng; chừa thiếu thì trang trống cuộn (quy tắc trang trống ở AGENTS.md)
+    for (const activeFilterCount of [0, 1]) {
+      const html = renderToString(React.createElement(TaskEmptyState, { activeFilterCount, onResetFilters: () => {} }));
+      assert.ok(html.includes('data-density="page"'), "khối trống là EmptyState density=page để empty-fill của khung bao nhận ra");
+      assert.ok(!/min-h-\[(?:calc|\d+d?vh)/.test(html), "không đặt min-h theo màn hình trong vùng đã cuộn");
+    }
+    const workspace = readFileSync(new URL("../src/components/workspace/unified-adaptive-workspace.tsx", import.meta.url), "utf8");
+    for (const slot of ["task-workspace-canvas", "full-width-task-canvas"]) {
+      assert.match(workspace, new RegExp(`data-slot="${slot}"\\s*className="empty-fill\\b`), `${slot} gắn empty-fill`);
+    }
+    assert.match(workspace, /"empty-fill space-y-4/, "khung unified-adaptive-workspace gắn empty-fill");
   });
 
   it("Đang thực hiện trống vì việc chưa xong đều đã trễ: nói rõ lý do, nút chữ thường sang Trễ hạn, icon đồng hồ báo thức", () => {

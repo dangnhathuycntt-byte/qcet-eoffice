@@ -91,7 +91,7 @@ export function DossierDisposalPanel({ dossierId }: { dossierId: string }) {
   const yearsValid = Number.isInteger(years) && years >= 1 && years <= 70;
 
   return (
-    <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]" aria-label="Xét hủy hồ sơ">
+    <section className="rounded-xl border border-border/70 bg-card p-4" aria-label="Xét hủy hồ sơ">
       <h2 className="mb-3 text-xs font-semibold text-foreground">Xét hủy hồ sơ</h2>
       <div className="space-y-2 text-compact">
         <p className="text-muted-foreground">

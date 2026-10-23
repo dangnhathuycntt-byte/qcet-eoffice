@@ -25,7 +25,7 @@ export function SectionCard({
 }) {
   const plain = variant === "plain";
   return (
-    <section className={cn(plain ? "border-t border-border/60 pt-4" : "rounded-[10px] border border-border bg-card p-3", className)} {...props}>
+    <section className={cn(plain ? "border-t border-border/60 pt-4" : "rounded-sm border-hairline border-border bg-card p-3", className)} {...props}>
       <div className={cn("flex items-center justify-between gap-2", plain ? "mb-1.5 min-h-7" : "mb-2 min-h-6")}>
         <h2 className={cn("flex min-w-0 items-center gap-1.5 text-xs", plain ? "font-medium text-muted-foreground" : "font-semibold text-foreground")}>
           {title}

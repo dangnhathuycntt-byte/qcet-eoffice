@@ -35,7 +35,7 @@ export function PWAUpdateDialog({
       role="region"
       aria-label="Thông báo cập nhật QCET E-Office"
       className={cn(
-        "fixed z-50 transition-all duration-300 pointer-events-auto",
+        "fixed z-50 transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-300 pointer-events-auto",
         "bottom-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:bottom-6",
         "left-4 right-4 md:left-auto md:right-6 md:max-w-md",
         className
@@ -43,7 +43,7 @@ export function PWAUpdateDialog({
     >
       <div
         className={cn(
-          "rounded-xl border p-4 shadow-xl backdrop-blur-md transition-all",
+          "rounded-xl border p-4 shadow-menu backdrop-blur-md transition-[color,background-color,border-color,box-shadow,opacity,transform]",
           hasUnsavedChanges
             ? "bg-warning/10 border-warning/40 text-warning shadow-warning/10"
             : "bg-white/95 border-border text-foreground shadow-foreground/10"

@@ -5,6 +5,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { TaskIconChecklist, TaskIconClose } from "@qcet/shared/lib/icons/task-icons";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { Kbd } from "@/components/ui/kbd";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 import { cn } from "@/lib/utils";
 
 /**
@@ -35,6 +36,7 @@ export interface SelectionActionBarProps {
  * hàng dưới là các thao tác chia đều.
  */
 export function SelectionActionBar({ count, total, noun, onClear, busy = false, children, className }: SelectionActionBarProps) {
+  const { mounted, leaving, shown } = useExitPresence({ count, total }, count > 0);
   React.useEffect(() => {
     if (count <= 0) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -47,17 +49,21 @@ export function SelectionActionBar({ count, total, noun, onClear, busy = false, 
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [count, onClear]);
 
-  if (count <= 0) return null;
+  if (!mounted) return null;
 
   return (
     <aside
       role="region"
       aria-label={`Thao tác hàng loạt trên ${noun}`}
       aria-busy={busy || undefined}
+      aria-hidden={leaving || undefined}
+      inert={leaving || undefined}
       className={cn(
         "fixed inset-x-0 bottom-6 z-40 mx-auto w-fit max-w-[95vw] select-none sm:max-w-max md:bottom-[calc(1.5rem+var(--app-statusbar,0px))] md:left-[var(--sidebar-w,0px)]",
         "max-sm:bottom-[calc(env(safe-area-inset-bottom,0px)+12px)] max-sm:w-[calc(100vw-24px)]",
-        "animate-in fade-in slide-in-from-bottom-3 duration-200 motion-reduce:animate-none",
+        leaving
+          ? "animate-out fade-out slide-out-to-bottom-3 fill-mode-forwards duration-150 motion-reduce:animate-none"
+          : "animate-in fade-in slide-in-from-bottom-3 duration-200 motion-reduce:animate-none",
         className
       )}
     >
@@ -65,8 +71,8 @@ export function SelectionActionBar({ count, total, noun, onClear, busy = false, 
         <div aria-live="polite" className="flex items-center gap-2 whitespace-nowrap pl-1.5 pr-2 text-xs font-medium max-sm:flex-1">
           <TaskIconChecklist className="size-4 shrink-0 text-primary" />
           <span>
-            Đã chọn <strong className="font-semibold tabular-nums">{count}</strong>
-            {total ? <span className="font-normal tabular-nums text-muted-foreground">/{total}</span> : null}
+            Đã chọn <strong className="font-semibold tabular-nums">{shown.count}</strong>
+            {shown.total ? <span className="font-normal tabular-nums text-muted-foreground">/{shown.total}</span> : null}
             <span className="sr-only"> {noun}</span>
           </span>
         </div>

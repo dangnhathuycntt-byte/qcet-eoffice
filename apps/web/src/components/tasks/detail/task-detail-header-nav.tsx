@@ -49,7 +49,7 @@ export function TaskDetailHeaderNav({
     <header
       data-slot="task-detail-header-nav"
       className={cn(
-        "h-10 w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background/95 backdrop-blur-md sticky top-0 z-30 select-none",
+        "h-10 w-full flex items-center justify-between px-4 sm:px-6 border-b border-border/40 bg-background sticky top-0 z-30 select-none",
         // Màn hẹp (<1024px) kiểu Linear: hàng 1 nút mở menu + tên nhiệm vụ + liên kết, hàng 2 tab + tiến độ + nút thuộc tính
         "max-lg:grid max-lg:h-auto max-lg:grid-cols-[minmax(0,1fr)_auto_auto] max-lg:gap-x-1.5 max-lg:pt-[env(safe-area-inset-top,0px)]",
         className

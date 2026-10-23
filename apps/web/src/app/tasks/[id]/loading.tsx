@@ -14,7 +14,7 @@ export default function TaskDetailLoading() {
         </div>
 
         {/* Title Header + Actions Banner */}
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-card border border-border/60 rounded-xl p-5 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-card border border-border/60 rounded-xl p-5 shadow-low">
           <div className="space-y-2.5 max-w-3xl">
             <div className="flex items-center gap-2">
               <div className="h-5 w-24 rounded-md bg-muted/60" />
@@ -34,7 +34,7 @@ export default function TaskDetailLoading() {
           {/* Main Column (2/3) */}
           <div className="lg:col-span-2 space-y-6">
             {/* Description Card */}
-            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-3 shadow-xs">
+            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-3 shadow-low">
               <div className="h-5 w-40 rounded bg-muted/70" />
               <div className="space-y-2 pt-1">
                 <div className="h-4 w-full rounded bg-muted/40" />
@@ -44,13 +44,13 @@ export default function TaskDetailLoading() {
             </div>
 
             {/* Deliverables Card */}
-            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-3 shadow-xs">
+            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-3 shadow-low">
               <div className="h-5 w-48 rounded bg-muted/70" />
               <div className="h-16 w-full rounded-lg bg-muted/30 border border-border/40" />
             </div>
 
             {/* Subtasks Card */}
-            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-4 shadow-xs">
+            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-4 shadow-low">
               <div className="flex items-center justify-between">
                 <div className="h-5 w-36 rounded bg-muted/70" />
                 <div className="h-7 w-28 rounded-lg bg-muted/50" />
@@ -62,7 +62,7 @@ export default function TaskDetailLoading() {
             </div>
 
             {/* Processing History Card */}
-            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-3 shadow-xs">
+            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-3 shadow-low">
               <div className="h-5 w-44 rounded bg-muted/70" />
               <div className="space-y-3 pl-4 pt-2">
                 <div className="h-4 w-3/4 rounded bg-muted/40" />
@@ -74,7 +74,7 @@ export default function TaskDetailLoading() {
           {/* Sidebar Column (1/3) */}
           <div className="space-y-6">
             {/* Operational Info Card */}
-            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-5 shadow-xs">
+            <div className="rounded-xl border border-border/60 bg-card p-5 space-y-5 shadow-low">
               <div className="h-5 w-40 rounded bg-muted/70 border-b border-border/40 pb-2" />
 
               <div className="space-y-4">

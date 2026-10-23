@@ -30,7 +30,7 @@ export interface StandardDialogProps {
   size?: "sm" | "md" | "lg" | "xl" | "full";
   showCloseButton?: boolean;
   showHeader?: boolean;
-  /** compact: mô tả 12px. Mặc định giữ nguyên. */
+  /** Mô tả 13px như chữ nội dung (thang Linear, không có 14px cho chữ phụ); compact: 12px như dòng phụ. */
   compact?: boolean;
   /** Phần tử nhận focus khi mở (Base UI `initialFocus`); mặc định là phần tử tab được đầu tiên. */
   initialFocus?: React.ComponentProps<typeof BaseDialog.Popup>["initialFocus"];
@@ -55,7 +55,7 @@ const sizeClasses: Record<NonNullable<StandardDialogProps["size"]>, string> = {
 
 /**
  * Standard Dialog wrapper over `@base-ui/react/dialog`.
- * Provides accessible portal, overlay backdrop (bg-overlay / bg-black/40), focus trap, ESC dismiss, and clean layout.
+ * Provides accessible portal, overlay backdrop (bg-overlay, đen 25% như Linear), focus trap, ESC dismiss, and clean layout.
  * Aligned with Modal.dc.html: 10% distance from top edge (avoids vertical jump on content resize), max-height 85dvh.
  * Điện thoại (< md): bám đáy màn hình, trượt từ dưới lên, có thanh kéo; nâng lên trên bàn phím ảo (`--keyboard-height`).
  * Các lớp `!` thắng `sm:max-w-*`/`sm:p-*` của nơi gọi trong khoảng 640–767px.
@@ -108,7 +108,7 @@ export function StandardDialog({
                     {title}
                   </BaseDialog.Title>
                   <BaseDialog.Description
-                    className={cn(!description && "sr-only", compact ? "text-xs" : "text-sm", "text-muted-foreground")}
+                    className={cn(!description && "sr-only", compact ? "text-xs" : "text-compact", "text-muted-foreground")}
                   >
                     {description || title}
                   </BaseDialog.Description>

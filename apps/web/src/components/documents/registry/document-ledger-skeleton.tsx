@@ -23,12 +23,12 @@ export function DocumentRegistrySkeleton({ rows = 10, cards = 8 }: { rows?: numb
             </div>
             <div className="px-4 pt-4">
               <div className="flex h-8 items-center gap-2 px-2 md:pl-6 md:pr-5">
-                <Skeleton className="size-3.5 rounded-[4px]" />
+                <Skeleton className="size-3.5 rounded" />
                 <Skeleton className="h-3 w-14 rounded" />
               </div>
               {Array.from({ length: rows }).map((_, i) => (
                 <div key={i} className="flex h-10 items-center gap-2 px-2 md:pl-6 md:pr-5">
-                  <Skeleton className="size-3.5 shrink-0 rounded-[4px]" />
+                  <Skeleton className="size-3.5 shrink-0 rounded" />
                   <div className="min-w-0 flex-1">
                     <Skeleton className="h-3 rounded" style={{ width: `${45 + ((i * 17) % 40)}%` }} />
                   </div>

@@ -212,7 +212,7 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-xl border border-border/70 bg-card p-4 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
+    <section className="rounded-xl border border-border/70 bg-card p-4">
       <h2 className="text-xs font-semibold text-foreground mb-3">
         {title}
       </h2>
@@ -447,7 +447,7 @@ export function DossierDetailView({
         </div>
 
         {/* Header card */}
-        <div className="rounded-xl border border-border/70 bg-card p-5 shadow-[var(--shadow-card,0_1px_3px_rgba(0,0,0,0.06))]">
+        <div className="rounded-xl border border-border/70 bg-card p-5">
           <div className="flex items-start gap-3">
             <div className="p-2 rounded-lg bg-primary/10 text-primary shrink-0 mt-0.5">
               <FolderArchive className="size-5" />

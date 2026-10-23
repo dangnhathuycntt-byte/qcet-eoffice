@@ -111,7 +111,7 @@ export function SubtaskOutlineRail({
             style={{ top: cardTop }}
             className="pointer-events-none absolute left-full z-30 -translate-y-1/2 pl-1 transition-[top] duration-100 ease-out motion-reduce:transition-none"
           >
-            <div className="w-64 rounded-xl border border-border bg-popover p-3 shadow-xl">
+            <div className="w-64 rounded-xl border border-border bg-popover p-3 shadow-menu">
               <div className="flex items-start gap-2">
                 <TaskStatusCircle status={hovered.status} className="mt-0.5" />
                 <span className="min-w-0 flex-1 text-xs font-medium text-foreground line-clamp-2">{hovered.title}</span>

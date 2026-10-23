@@ -78,7 +78,7 @@ export function ActionQueueShell({
     <section
       aria-labelledby="action-queue-title"
       className={cn(
-        "rounded-panel bg-card border border-border/60 shadow-none overflow-hidden transition-all",
+        "rounded-panel bg-card border border-border/60 shadow-none overflow-hidden transition-colors",
         className
       )}
     >
@@ -160,9 +160,9 @@ export function ActionQueueShell({
                 aria-selected={isActive}
                 onClick={() => onTabChange(tab.id)}
                 className={cn(
-                  "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold min-h-[44px] transition-all select-none shrink-0",
+                  "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold min-h-[44px] transition-[color,background-color,border-color,box-shadow,opacity,transform] select-none shrink-0",
                   isActive
-                    ? "bg-background text-foreground shadow-xs border border-border"
+                    ? "bg-background text-foreground shadow-low border border-border"
                     : "text-muted-foreground hover:text-foreground hover:bg-background/60"
                 )}
               >

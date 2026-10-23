@@ -29,6 +29,7 @@ import { getSystemReferenceDate } from "../utils/table-date-helpers";
 import { PRIORITY_DISPLAY_CONFIG, STATUS_DISPLAY_CONFIG } from "@qcet/shared/domain/tasks/display-config";
 import { Pressable } from "@/components/ui/pressable";
 import { Kbd } from "@/components/ui/kbd";
+import { useExitPresence } from "@/hooks/use-exit-presence";
 
 /**
  * Cộng `daysToAdd` ngày vào `baseDate` (hạn hiện tại; mặc định hôm nay) theo UTC để không lệch ngày.
@@ -203,6 +204,8 @@ export function BatchActionBar({
     onBulkDelete
   );
 
+  const { mounted, leaving, shown } = useExitPresence({ selectedCount, totalCount }, selectedCount > 0 && hasAnyAction);
+
   // Lắng nghe phím Escape để hủy chọn toàn bộ
   React.useEffect(() => {
     if (selectedCount <= 0) return;
@@ -218,7 +221,7 @@ export function BatchActionBar({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedCount, onClearSelection]);
 
-  if (selectedCount <= 0 || !hasAnyAction) {
+  if (!mounted) {
     return null;
   }
 
@@ -236,9 +239,13 @@ export function BatchActionBar({
       aria-label="Thao tác hàng loạt"
       aria-live="polite"
       aria-busy={isLoading}
+      aria-hidden={leaving || undefined}
+      inert={leaving || undefined}
       className={cn(
         "hidden sm:block fixed bottom-6 md:bottom-[calc(1.5rem+var(--app-statusbar,0px))] inset-x-0 md:left-[var(--sidebar-w,0px)] mx-auto w-fit z-40 max-w-[95vw] sm:max-w-max",
-        "animate-in fade-in slide-in-from-bottom-3 duration-200",
+        leaving
+          ? "animate-out fade-out slide-out-to-bottom-3 fill-mode-forwards duration-150 motion-reduce:animate-none"
+          : "animate-in fade-in slide-in-from-bottom-3 duration-200 motion-reduce:animate-none",
         className
       )}
     >
@@ -248,9 +255,9 @@ export function BatchActionBar({
           <TaskIconChecklist className="size-4 text-primary shrink-0" />
           <span>
             Đã chọn{" "}
-            <strong className="font-semibold tabular-nums text-foreground">{selectedCount}</strong>
-            {totalCount ? (
-              <span className="text-muted-foreground font-normal">/{totalCount}</span>
+            <strong className="font-semibold tabular-nums text-foreground">{shown.selectedCount}</strong>
+            {shown.totalCount ? (
+              <span className="text-muted-foreground font-normal">/{shown.totalCount}</span>
             ) : (
               ""
             )}

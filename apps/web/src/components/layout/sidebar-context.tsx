@@ -8,6 +8,7 @@ import { FileText, Building2, LayoutDashboard, Calendar, CheckSquare, Inbox, typ
 import { WorkspaceZone } from "@qcet/contracts/types/workspace";
 import { animate, useMotionValue, type MotionValue } from "motion/react";
 import { motionTransition } from "@/lib/motion/tokens";
+import { prefersReducedMotion } from "@/lib/motion/list-motion";
 import {
   SIDEBAR_COLLAPSED_COOKIE,
   readSidebarCollapsedFromCookieString,
@@ -247,8 +248,14 @@ export function SidebarLayoutProvider({
     : SIDEBAR_EXPANDED_WIDTH;
   const sidebarWidthMotion = useMotionValue(sidebarWidth);
 
+  // Chiều rộng là thuộc tính layout (cả trang dựng lại mỗi khung hình), nên chạy tween `panel` 0,26s thay vì lò xo (~0,7s mới
+  // dừng). `animate()` không theo `MotionConfig`: giảm chuyển động thì đặt thẳng.
   React.useEffect(() => {
-    const controls = animate(sidebarWidthMotion, sidebarWidth, motionTransition.gentleSpring);
+    if (prefersReducedMotion()) {
+      sidebarWidthMotion.set(sidebarWidth);
+      return;
+    }
+    const controls = animate(sidebarWidthMotion, sidebarWidth, motionTransition.panel);
     return () => controls.stop();
   }, [sidebarWidth, sidebarWidthMotion]);
 

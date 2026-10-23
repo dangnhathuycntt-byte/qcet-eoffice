@@ -11,8 +11,8 @@ const avatarVariants = cva(
   {
     variants: {
       size: {
-        xs: "size-4", // 16px (bảng phụ, deadlines)
-        sm: "size-5", // 20px (bảng chính, sidebar)
+        xs: "size-4", // 16px (hàng bảng danh sách, như Linear)
+        sm: "size-5", // 20px (sidebar, menu)
         md: "size-6", // 24px (hoạt động, preview)
         lg: "size-8", // 32px (hồ sơ, topbar)
         xl: "size-[60px]", // 60px (onboarding, profile hero)

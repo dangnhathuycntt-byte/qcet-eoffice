@@ -38,7 +38,7 @@ export function InlineAlert({
       role={variant === "error" ? "alert" : "status"}
       data-slot="inline-alert"
       className={cn(
-        "flex items-center gap-1.5 text-xs leading-normal font-normal",
+        "enter-fade flex items-center gap-1.5 text-xs leading-normal font-normal",
         colorStyles,
         className,
       )}

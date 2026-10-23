@@ -68,7 +68,7 @@ export function TaskSourceDocumentBadge({
           />
           <Tooltip.Portal>
             <Tooltip.Positioner sideOffset={4}>
-              <Tooltip.Popup className="z-50 max-w-xs rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
+              <Tooltip.Popup className="z-50 max-w-xs rounded-md border border-border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-menu">
                 <p className="font-medium">
                   {typeLabel}: {sourceDocument.originalNumber}
                 </p>

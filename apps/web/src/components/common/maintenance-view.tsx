@@ -74,12 +74,12 @@ export function MaintenanceView({
       </div>
 
       {/* Main Maintenance Banner Card */}
-      <Card className="p-6 md:p-8 border-border/80 shadow-xs relative overflow-hidden bg-card/80 backdrop-blur-sm">
+      <Card className="p-6 md:p-8 border-border/80 shadow-low relative overflow-hidden bg-card/80 backdrop-blur-sm">
         {/* Subtle background glow */}
         <div className="absolute top-0 right-0 w-80 h-80 bg-warning/5 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center gap-5 relative z-10">
-          <div className="size-14 rounded-2xl bg-warning/10 border border-warning/20 text-warning flex items-center justify-center shrink-0 shadow-xs">
+          <div className="size-14 rounded-2xl bg-warning/10 border border-warning/20 text-warning flex items-center justify-center shrink-0 shadow-low">
             <Wrench className="size-7" />
           </div>
 

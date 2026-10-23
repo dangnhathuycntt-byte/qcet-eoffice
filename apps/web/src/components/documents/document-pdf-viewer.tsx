@@ -196,7 +196,7 @@ export function DocumentPdfViewer({
       <img
         src={fileUrl}
         alt={fileName}
-        className="mx-auto rounded-sm bg-card shadow-xs"
+        className="mx-auto rounded-sm bg-card shadow-low"
         style={{ width: `${zoomLevel}%`, maxWidth: "none" }}
       />
     ) : (

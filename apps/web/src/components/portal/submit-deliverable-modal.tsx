@@ -436,7 +436,7 @@ export function SubmitDeliverableModal({
                   }
                 }}
                 className={cn(
-                  "relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-xl border-2 border-dashed transition-all cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+                  "relative flex flex-col items-center justify-center p-4 sm:p-5 rounded-xl border-2 border-dashed transition-[color,background-color,border-color,box-shadow,opacity,transform] cursor-pointer text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
                   isDragging
                     ? "border-primary bg-primary/5 scale-[0.99]"
                     : "border-border/70 hover:border-primary/50 hover:bg-muted/30 bg-muted/10"
@@ -595,7 +595,7 @@ export function SubmitDeliverableModal({
               type="submit"
               size="sm"
               disabled={submittingNow}
-              className="w-full sm:w-auto min-h-[44px] h-11 sm:h-10 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 shadow-xs disabled:opacity-50 active:scale-[0.99]"
+              className="w-full sm:w-auto min-h-[44px] h-11 sm:h-10 text-xs sm:text-sm font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl gap-1.5 shadow-low disabled:opacity-50 active:scale-[0.99]"
             >
               {submittingNow ? (
                 <>

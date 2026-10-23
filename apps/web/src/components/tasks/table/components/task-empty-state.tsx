@@ -177,16 +177,9 @@ export const TaskEmptyState = React.memo(function TaskEmptyState({
       aria-live="polite"
       density="page"
       illustration={illustration}
-      // Từ md: cao gần hết vùng nội dung, pt-24 kéo khối xuống gần giữa vùng như Linear. Phần chừa (13rem) phải lớn hơn mọi thứ
-      // quanh vùng cuộn: khung trang, hai hàng thanh công cụ (88px), đệm dưới và thanh trạng thái; chừa thiếu thì trang trống vẫn
-      // cuộn (người dùng báo 20/10/2026: chừa 8.5rem dư 70px ở mọi cỡ màn hình). Chừa dư chỉ làm khối cao lên ít hơn, không cuộn.
-      // Có hàng bộ lọc (cao 32px, cách 6px) thì chừa thêm 2.5rem. Màn thấp (≤ 700px) đệm trên 48px: đệm 96px cộng dòng "Đang áp
-      // dụng…" làm khối cao hơn phần chừa và trang trống cuộn (1000×600 dư 12px).
-      className={cn(
-        "min-h-[66vh] select-none md:pt-24 md:[@media(max-height:700px)]:pt-12",
-        activeFilterCount ? "md:min-h-[calc(100dvh-15.5rem)]" : "md:min-h-[calc(100dvh-13rem)]",
-        className,
-      )}
+      // Khối giãn hết vùng cuộn nhờ `empty-fill` ở các khung bao (`unified-adaptive-workspace`), không tự chừa chiều cao theo màn
+      // hình (trước 23/10/2026 là `calc(100dvh-13rem)`, chừa thiếu thì trang trống cuộn)
+      className={cn("select-none", className)}
       title={displayTitle}
       description={
         <>

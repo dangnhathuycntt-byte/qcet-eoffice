@@ -626,7 +626,7 @@ export function TaskTableToolbar({
             placeholder="Tìm theo tên, mã nhiệm vụ..."
             disabled={loading}
             aria-label="Tìm kiếm nhiệm vụ"
-            className="w-full h-9 pl-9.5 pr-12 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-2xs"
+            className="w-full h-9 pl-9.5 pr-12 rounded-xl border border-border/80 bg-card text-sm text-foreground placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-low"
           />
           {localQuery && (
             <Button
@@ -655,7 +655,7 @@ export function TaskTableToolbar({
             className={cn(
               "inline-flex items-center gap-1.5 min-h-8 px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
               activeTab === "all"
-                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                ? "bg-primary text-primary-foreground font-semibold shadow-low"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
             )}
           >
@@ -673,7 +673,7 @@ export function TaskTableToolbar({
             className={cn(
               "inline-flex items-center gap-1.5 min-h-8 px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
               activeTab === "my_tasks"
-                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                ? "bg-primary text-primary-foreground font-semibold shadow-low"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
             )}
           >
@@ -691,7 +691,7 @@ export function TaskTableToolbar({
             className={cn(
               "inline-flex items-center gap-1.5 min-h-8 px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
               activeTab === "review"
-                ? "bg-primary text-primary-foreground font-semibold shadow-2xs"
+                ? "bg-primary text-primary-foreground font-semibold shadow-low"
                 : "border border-border/70 bg-card text-muted-foreground hover:bg-muted/60 font-medium"
             )}
           >
@@ -710,7 +710,7 @@ export function TaskTableToolbar({
               className={cn(
                 "inline-flex items-center gap-1.5 min-h-8 px-3.5 rounded-xl text-xs transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation shrink-0 active:scale-[0.98]",
                 activeTab === "overdue"
-                  ? "bg-destructive text-destructive-foreground font-semibold shadow-2xs"
+                  ? "bg-destructive text-destructive-foreground font-semibold shadow-low"
                   : "border border-destructive/20 bg-danger-soft text-destructive font-medium"
               )}
             >
@@ -729,7 +729,7 @@ export function TaskTableToolbar({
             <Pressable
               onClick={() => setIsMobileFilterOpen(true)}
               className={cn(
-                "inline-flex items-center justify-center gap-1.5 min-h-8 px-3.5 rounded-xl border text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation active:scale-[0.98] shadow-2xs",
+                "inline-flex items-center justify-center gap-1.5 min-h-8 px-3.5 rounded-xl border text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation active:scale-[0.98] shadow-low",
                 activeAdvancedFilterCount > 0
                   ? "border-primary/40 bg-primary/10 text-primary font-semibold"
                   : "border-border/80 bg-card text-foreground hover:bg-muted"
@@ -759,7 +759,7 @@ export function TaskTableToolbar({
               isCustomized={isDisplayCustomized}
               onReset={handleResetDisplayProperties}
               ariaLabel="Tùy chọn hiển thị"
-              triggerClassName="inline-flex size-8 items-center justify-center rounded-xl border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation cursor-pointer active:scale-[0.98] shadow-2xs relative"
+              triggerClassName="inline-flex size-8 items-center justify-center rounded-xl border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-[color,background-color,border-color,box-shadow,transform] touch-manipulation cursor-pointer active:scale-[0.98] shadow-low relative"
             />
 
             {/* Nút Sắp xếp nhanh di động */}
@@ -774,7 +774,7 @@ export function TaskTableToolbar({
                       : "dueDate";
                   onSort(nextSort);
                 }}
-                className="inline-flex items-center justify-center gap-1.5 min-h-8 px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation active:scale-[0.98] shadow-2xs hover:bg-muted"
+                className="inline-flex items-center justify-center gap-1.5 min-h-8 px-3 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium touch-manipulation active:scale-[0.98] shadow-low hover:bg-muted"
                 aria-label="Sắp xếp danh sách công việc"
               >
                 <ArrowUpDown className="size-4 text-muted-foreground" />
@@ -797,7 +797,7 @@ export function TaskTableToolbar({
             {canCreateTask && onAddTask && (
               <Pressable
                 onClick={onAddTask}
-                className="inline-flex items-center justify-center gap-1.5 min-h-8 px-3.5 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium shadow-2xs active:scale-[0.98] transition-colors hover:bg-muted touch-manipulation"
+                className="inline-flex items-center justify-center gap-1.5 min-h-8 px-3.5 rounded-xl border border-border/80 bg-card text-foreground text-xs font-medium shadow-low active:scale-[0.98] transition-colors hover:bg-muted touch-manipulation"
                 aria-label="Tạo việc mới"
               >
                 <Plus className="size-4 text-muted-foreground" />
@@ -823,7 +823,7 @@ export function TaskTableToolbar({
             />
 
             {/* Drawer Surface */}
-            <div className="relative z-10 w-full max-w-lg rounded-t-2xl border-t border-border/80 bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-2xl max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
+            <div className="relative z-10 w-full max-w-lg rounded-t-2xl border-t border-border/80 bg-card p-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-dialog max-h-[85vh] overflow-y-auto space-y-4 animate-in slide-in-from-bottom duration-200">
               {/* Drag Handle Indicator */}
               <div className="mx-auto w-12 h-1.5 rounded-full bg-border/80 mb-1 shrink-0" aria-hidden="true" />
 
@@ -1002,7 +1002,7 @@ export function TaskTableToolbar({
               placeholder={searchPlaceholder}
               disabled={loading}
               aria-label="Tìm kiếm nhiệm vụ"
-              className="w-full h-8.5 pl-8.5 pr-14 rounded-lg border border-border/70 bg-card text-xs text-foreground placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/80 transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-2xs"
+              className="w-full h-8.5 pl-8.5 pr-14 rounded-lg border border-border/70 bg-card text-xs text-foreground placeholder:text-faint focus:outline-none focus:ring-1 focus:ring-primary/50 focus:border-primary/80 transition-[border-color,box-shadow,opacity] disabled:opacity-60 shadow-low"
             />
             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
               {localQuery ? (
@@ -1031,7 +1031,7 @@ export function TaskTableToolbar({
                 setIsDesktopFilterOpen((v) => !v);
               }}
               className={cn(
-                "h-8.5 gap-1.5 text-xs font-medium border-border/80 bg-card text-foreground hover:bg-muted shadow-2xs transition-[color,background-color,border-color,box-shadow]",
+                "h-8.5 gap-1.5 text-xs font-medium border-border/80 bg-card text-foreground hover:bg-muted shadow-low transition-[color,background-color,border-color,box-shadow]",
                 isDesktopFilterOpen && "bg-selected"
               )}
             >
@@ -1063,7 +1063,7 @@ export function TaskTableToolbar({
               onVisibleColumnsChange={onVisibleColumnsChange}
               isCustomized={isDisplayCustomized}
               onReset={handleResetDisplayProperties}
-              triggerClassName="inline-flex h-8.5 w-8.5 items-center justify-center rounded-lg border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-[color,background-color,border-color,box-shadow] cursor-pointer relative shadow-2xs"
+              triggerClassName="inline-flex h-8.5 w-8.5 items-center justify-center rounded-lg border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground text-xs font-medium transition-[color,background-color,border-color,box-shadow] cursor-pointer relative shadow-low"
             />
           </div>
 
@@ -1154,7 +1154,7 @@ export function TaskTableToolbar({
           {onAddTask && canCreateTask && (
             <Pressable
               onClick={onAddTask}
-              className="inline-flex items-center gap-1.5 h-8.5 px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-2xs active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 h-8.5 px-3 rounded-lg border border-border/80 bg-card text-xs font-medium text-foreground hover:bg-muted transition-colors shadow-low active:scale-[0.98]"
               aria-label="Tạo việc mới"
             >
               <Plus className="size-3.5 text-muted-foreground" />
@@ -1188,8 +1188,8 @@ export function TaskTableToolbar({
                 "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs transition-[color,background-color,border-color,box-shadow] whitespace-nowrap shrink-0",
                 isActive
                   ? isOverdueTab
-                    ? "bg-card text-destructive font-semibold shadow-2xs border border-destructive/20"
-                    : "bg-card text-foreground font-semibold shadow-2xs border border-border/50"
+                    ? "bg-card text-destructive font-semibold shadow-low border border-destructive/20"
+                    : "bg-card text-foreground font-semibold shadow-low border border-border/50"
                   : isOverdueTab
                   ? "text-destructive/90 hover:bg-card/60 hover:text-destructive font-medium"
                   : "text-muted-foreground hover:bg-card/60 hover:text-foreground font-medium"

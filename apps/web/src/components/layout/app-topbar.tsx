@@ -136,7 +136,7 @@ export function AppTopbar({ showSearch = true }: { showSearch?: boolean } = {}) 
   return (
     <header
       data-slot="app-topbar"
-      className="md:hidden sticky top-0 z-30 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-full shrink-0 items-center gap-1 border-b border-border/60 bg-card/95 px-4 pt-[env(safe-area-inset-top,0px)] backdrop-blur-md select-none"
+      className="md:hidden sticky top-0 z-30 flex h-[calc(44px+env(safe-area-inset-top,0px))] w-full shrink-0 items-center gap-1 border-b border-border/60 bg-card px-4 pt-[env(safe-area-inset-top,0px)] select-none"
     >
       {/* Hộp thư có thông báo chưa đọc: nút tự hiện chấm, số nằm ở mục Hộp thư trong ngăn kéo */}
       <MobileMenuButton className="-ml-1.5 mr-1" />
