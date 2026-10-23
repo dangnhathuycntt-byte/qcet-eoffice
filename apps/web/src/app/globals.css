@@ -288,6 +288,20 @@
   --file-slide: #C43E1C;
   --file-image: #6D4BB5;
   --file-archive: #6B6F76;
+  /* Màu nền ghi chú (khóa trong PERSONAL_NOTE_COLORS): nền nhạt, chữ chính --gray-12 đạt ≥ 10:1; chữ phụ trên thẻ có màu đổi
+     sang --note-muted (≥ 5:1 trên cả 11 màu, đo 23/10/2026) vì --gray-11 chỉ đạt 3,7:1 trên các màu đậm nhất. */
+  --note-coral: #F9CFCA;
+  --note-peach: #FAD9BD;
+  --note-sand: #FDF1BC;
+  --note-mint: #DFF1CE;
+  --note-sage: #C6E6DC;
+  --note-fog: #DDEAF2;
+  --note-storm: #BCD4E6;
+  --note-dusk: #DFD2ED;
+  --note-blossom: #F8E0E4;
+  --note-clay: #EBE2D4;
+  --note-chalk: #E9EAED;
+  --note-muted: #505256;
   --feedback-danger: #B91C1C;
   --feedback-danger-bg: #FBEDED;
   --brand: #0058A0; /* xanh logo trường, tương phản 7.6:1 */
@@ -1328,4 +1342,25 @@
   transition:
     background-color var(--motion-duration-panel) var(--motion-ease-standard),
     box-shadow var(--motion-duration-panel) var(--motion-ease-standard);
+}
+
+/* Ghi chú có màu: `data-note-color` đặt trên thẻ, hộp soạn và ô chọn màu. Nền đổi theo khóa màu, chữ phụ và placeholder sẫm
+   lại (theme inline nên tiện ích `text-muted-foreground`/`text-faint` đọc thẳng --muted-foreground và --gray-8, ghi đè ở đây). */
+@layer components {
+  [data-note-color] {
+    background-color: var(--note-bg);
+    --muted-foreground: var(--note-muted);
+    --gray-8: var(--note-muted);
+  }
+  [data-note-color="coral"] { --note-bg: var(--note-coral); }
+  [data-note-color="peach"] { --note-bg: var(--note-peach); }
+  [data-note-color="sand"] { --note-bg: var(--note-sand); }
+  [data-note-color="mint"] { --note-bg: var(--note-mint); }
+  [data-note-color="sage"] { --note-bg: var(--note-sage); }
+  [data-note-color="fog"] { --note-bg: var(--note-fog); }
+  [data-note-color="storm"] { --note-bg: var(--note-storm); }
+  [data-note-color="dusk"] { --note-bg: var(--note-dusk); }
+  [data-note-color="blossom"] { --note-bg: var(--note-blossom); }
+  [data-note-color="clay"] { --note-bg: var(--note-clay); }
+  [data-note-color="chalk"] { --note-bg: var(--note-chalk); }
 }

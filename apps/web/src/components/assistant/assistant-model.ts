@@ -201,6 +201,8 @@ export interface ThreadMessage {
   startedAt?: number;
   /** Số lời gọi propose_task mô hình đã bắt đầu viết trong lượt đang chạy (thẻ tới sau, khi cả vòng xong). */
   proposalsStarted?: number;
+  /** Công cụ của vòng hiện tại đang chạy (từ `tool_start` tới `step`); false là mô hình đang nghĩ hoặc viết. */
+  toolsRunning?: boolean;
   /** Thẻ hành động chờ duyệt của lượt trả lời (ADR-012): bình luận, đổi trạng thái, nhắc việc, ghi nhớ. */
   actions?: AssistantActionDTO[];
 }
@@ -417,12 +419,14 @@ export function threadMessageFromDto(dto: AssistantMessageDTO): ThreadMessage {
 /** Áp một sự kiện của lượt lên tin trả lời đang chạy. Sự kiện `conversation`/`context` do khung chat xử lý. */
 export function reduceAssistantReply(reply: ThreadMessage, event: AssistantStreamEvent): ThreadMessage {
   switch (event.type) {
+    case "tool_start":
+      return { ...reply, toolsRunning: true };
     case "step":
-      return { ...reply, steps: [...reply.steps, event.step] };
+      return { ...reply, steps: [...reply.steps, event.step], toolsRunning: false };
     case "thinking":
-      return { ...reply, thinking: reply.thinking + event.delta };
+      return { ...reply, thinking: reply.thinking + event.delta, toolsRunning: false };
     case "text":
-      return { ...reply, content: reply.content + event.delta };
+      return { ...reply, content: reply.content + event.delta, toolsRunning: false };
     case "sources":
       return { ...reply, sources: event.sources };
     case "proposal":

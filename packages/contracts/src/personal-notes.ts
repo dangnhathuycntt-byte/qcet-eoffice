@@ -8,6 +8,14 @@ export const PERSONAL_NOTE_ENTITY_TYPES = ['meeting', 'task'] as const;
 export const PersonalNoteEntityTypeSchema = z.enum(PERSONAL_NOTE_ENTITY_TYPES);
 export type PersonalNoteEntityType = z.infer<typeof PersonalNoteEntityTypeSchema>;
 
+/**
+ * Màu nền thẻ ghi chú (người dùng yêu cầu 23/10/2026, theo Google Keep): khóa theo tên màu, màu thật là token `--note-*` ở
+ * `globals.css`. Null là màu mặc định (nền trắng của thẻ).
+ */
+export const PERSONAL_NOTE_COLORS = ['coral', 'peach', 'sand', 'mint', 'sage', 'fog', 'storm', 'dusk', 'blossom', 'clay', 'chalk'] as const;
+export const PersonalNoteColorSchema = z.enum(PERSONAL_NOTE_COLORS);
+export type PersonalNoteColor = z.infer<typeof PersonalNoteColorSchema>;
+
 export const PERSONAL_NOTE_TITLE_MAX = 200;
 export const PERSONAL_NOTE_CONTENT_MAX = 50_000;
 /** Mỗi người tối đa số ghi chú này (chống lạm dụng bộ nhớ). */
@@ -35,6 +43,7 @@ export const PersonalNoteSummarySchema = z.object({
   previewLines: z.array(NotePreviewLineSchema),
   images: z.array(NoteCardImageSchema),
   pinned: z.boolean(),
+  color: PersonalNoteColorSchema.nullable(),
   entityType: PersonalNoteEntityTypeSchema.nullable(),
   entityId: z.string().nullable(),
   updatedAt: z.string(),
@@ -63,6 +72,7 @@ export const CreatePersonalNoteSchema = z
     title: z.string().max(PERSONAL_NOTE_TITLE_MAX).default(''),
     content: z.string().max(PERSONAL_NOTE_CONTENT_MAX).default(''),
     pinned: z.boolean().default(false),
+    color: PersonalNoteColorSchema.nullish(),
     entityType: PersonalNoteEntityTypeSchema.nullish(),
     entityId: z.string().trim().min(1).max(64).nullish(),
   })
@@ -76,6 +86,8 @@ export const UpdatePersonalNoteSchema = z
     title: z.string().max(PERSONAL_NOTE_TITLE_MAX).optional(),
     content: z.string().max(PERSONAL_NOTE_CONTENT_MAX).optional(),
     pinned: z.boolean().optional(),
+    /** `null` đưa về màu mặc định. */
+    color: PersonalNoteColorSchema.nullish(),
     entityType: PersonalNoteEntityTypeSchema.nullish(),
     entityId: z.string().trim().min(1).max(64).nullish(),
   })

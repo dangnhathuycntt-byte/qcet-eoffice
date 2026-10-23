@@ -21,7 +21,7 @@ import { AuditAction } from '@qcet/db/audit';
 import { ApiError } from '@/server/api/errors';
 import type { AuthorizationContext } from '@/server/authorization/authorization-context';
 import type { GatewayCompletion, GatewayConfig, GatewayMessage, GatewayToolDefinition, GatewayCallOptions, callGateway } from '@/server/services/agent-gateway';
-import { runAssistantTurn, ASSISTANT_LIMITS, type AssistantTurnDeps, type AssistantTurnInput } from '@/server/assistant/assistant-service';
+import { runAssistantTurn, readAssistantConfig, ASSISTANT_LIMITS, type AssistantTurnDeps, type AssistantTurnInput } from '@/server/assistant/assistant-service';
 import { RESTRICTED_MESSAGE, ToolFailure } from '@/server/assistant/assistant-tool-shared';
 import type { AssistantSourceRef, AssistantStreamEvent } from '@qcet/contracts/assistant';
 
@@ -556,6 +556,46 @@ describe('Trợ lý: vòng hội thoại (service, deps giả)', () => {
     assert.deepEqual(events, []);
     assert.equal(gateway.calls.length, 0);
     assert.equal(await prisma.assistantConversation.count({ where: { userId: user.id } }), before);
+  });
+
+  it('mức nghĩ của Trợ lý tách khỏi Agent soạn nhiệm vụ: mặc định thấp, ASSISTANT_THINKING_BUDGET từ 1024 bật lại nghĩ cao', () => {
+    const keys = ['TASK_AGENT_BASE_URL', 'TASK_AGENT_API_KEY', 'TASK_AGENT_MODEL', 'TASK_AGENT_THINKING_BUDGET', 'ASSISTANT_THINKING_BUDGET'] as const;
+    const saved = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+    try {
+      Object.assign(process.env, { TASK_AGENT_BASE_URL: 'http://gateway.test/v1', TASK_AGENT_API_KEY: 'k', TASK_AGENT_MODEL: 'm', TASK_AGENT_THINKING_BUDGET: '65536' });
+      delete process.env.ASSISTANT_THINKING_BUDGET;
+      assert.equal(readAssistantConfig().thinkingBudget, null, 'Agent soạn nhiệm vụ nghĩ cao không kéo Trợ lý theo');
+      process.env.ASSISTANT_THINKING_BUDGET = '2048';
+      assert.equal(readAssistantConfig().thinkingBudget, 2048);
+      process.env.ASSISTANT_THINKING_BUDGET = '512';
+      assert.equal(readAssistantConfig().thinkingBudget, null, 'dưới 1024 là không hợp lệ');
+    } finally {
+      for (const key of keys) {
+        if (saved[key] === undefined) delete process.env[key];
+        else process.env[key] = saved[key];
+      }
+    }
+  });
+
+  it('tool_start phát một lần trước step khi vòng có công cụ đọc, không phát khi chỉ có công cụ soạn thẻ', async () => {
+    const read = await runTurn(
+      [() => completion('', [{ id: 'r1', name: 'list_tasks', arguments: '{}' }], 'tool_calls'), () => completion('Xong.')],
+      {},
+      { runTool: async () => ({ ok: true, content: '{}', step: { tool: 'list_tasks', label: 'Đọc việc', count: null, ok: true }, sources: [], detailed: false }) as never },
+    );
+    const types = read.events.map((e) => e.type).filter((type) => type === 'tool_start' || type === 'step');
+    assert.deepEqual(types, ['tool_start', 'step']);
+
+    const { runAssistantTool } = await import('@/server/assistant/assistant-tools');
+    const compose = await runTurn(
+      [
+        () => completion('', [{ id: 'c1', name: 'propose_task', arguments: JSON.stringify({ title: `Chuẩn bị lễ khai giảng ${runId}` }) }], 'tool_calls'),
+        () => completion('Đã soạn một đề xuất.'),
+      ],
+      { message: 'Soạn nhiệm vụ chuẩn bị lễ khai giảng' },
+      { runTool: runAssistantTool },
+    );
+    assert.equal(compose.events.some((e) => e.type === 'tool_start'), false);
   });
 
   it('công cụ ném lỗi bất ngờ: bước thất bại, tin tool báo lỗi chung, lượt vẫn trả lời', async () => {

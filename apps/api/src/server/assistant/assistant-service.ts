@@ -188,12 +188,22 @@ interface DescribedContext {
 }
 
 /**
+ * Cấu hình gateway của Trợ lý. Mức nghĩ tách khỏi Agent soạn nhiệm vụ (`TASK_AGENT_THINKING_BUDGET`, giữ để mô hình nghĩ
+ * tối đa): một lượt Trợ lý nối nhiều vòng gọi mô hình (đọc, soạn thẻ, viết câu trả lời), mỗi vòng nghĩ cao mất ~10 giây dù
+ * việc chỉ là chọn công cụ. Mặc định nghĩ thấp; `ASSISTANT_THINKING_BUDGET` (số token, từ 1024) bật lại nghĩ cao.
+ */
+export function readAssistantConfig(): GatewayConfig {
+  const budget = Number.parseInt(process.env.ASSISTANT_THINKING_BUDGET ?? "", 10);
+  return { ...readGatewayConfig("Trợ lý"), thinkingBudget: Number.isFinite(budget) && budget >= 1024 ? budget : null };
+}
+
+/**
  * Nạp phần phụ thuộc: mặc định là gateway thật và công cụ thật. Công cụ chỉ được nạp khi người gọi không truyền đủ,
  * để bài test với deps giả không kéo mô-đun công cụ vào.
  */
 async function resolveDeps(partial: Partial<AssistantTurnDeps> = {}): Promise<AssistantTurnDeps> {
   const gateway = partial.callGateway ?? callGateway;
-  const readConfig = partial.readConfig ?? (() => readGatewayConfig("Trợ lý"));
+  const readConfig = partial.readConfig ?? readAssistantConfig;
   // Gateway giả (kiểm thử) mà không truyền generateTitle thì không đặt tên, để lần gọi đặt tên không lấy kịch bản của lượt
   const generateTitle = partial.generateTitle ?? (partial.callGateway ? undefined : generateConversationTitle);
   if (partial.runTool && partial.toolDefinitions && partial.describeContext) {
@@ -625,6 +635,8 @@ async function runTurn(
         else overflow.push(call);
       }
       // Cả batch vẫn chạy song song; kết quả đọc dữ liệu chỉ được gửi theo thứ tự gọi khi còn trong ngân sách của cả lượt
+      // Công cụ soạn thẻ chạy tức thì, không báo: dòng trạng thái giữ "Đang suy nghĩ" thay vì chớp "Đang đọc dữ liệu"
+      if (batch.some((call) => !isComposeCall(call))) emit({ type: "tool_start" });
       const runs = await Promise.all(
         batch.map((call) => (budgetUsed && !isComposeCall(call) ? null : runToolSafely(deps, call, toolCtx, turn.signal))),
       );

@@ -3,18 +3,37 @@
 import * as React from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { ArrowUpRight, Pin, PinOff, Trash2 } from "lucide-react";
-import type { PersonalNote } from "@qcet/contracts/personal-notes";
+import {
+  ArrowUpRight,
+  CheckSquare,
+  Heading1,
+  Heading2,
+  Heading3,
+  ImagePlus,
+  List,
+  ListOrdered,
+  Pin,
+  PinOff,
+  Quote,
+  Redo2,
+  Trash2,
+  Type,
+  Undo2,
+} from "lucide-react";
+import type { PersonalNote, PersonalNoteColor } from "@qcet/contracts/personal-notes";
 import {
   PERSONAL_NOTE_CONTENT_MAX,
   PERSONAL_NOTE_TITLE_MAX,
 } from "@qcet/contracts/personal-notes";
 import { Button } from "@/components/ui/button";
+import { MenuActionItem, MenuContent, MenuRoot, MenuTrigger } from "@/components/ui/menu";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { formatRecencyTime } from "@qcet/shared/lib/format/recency";
+import { NoteColorPicker } from "@/components/notes/note-color-picker";
 import { updateNote } from "@/components/notes/notes-client";
 import { useNoteAutosave, type NoteSaveState } from "@/components/notes/use-note-autosave";
+import type { TaskBlockEditorApi } from "@/components/tasks/detail/task-block-editor";
 
 /** Tự lưu nên không báo "Đang lưu…/Đã lưu" (người dùng bỏ 21/10/2026); chỉ báo khi lưu hỏng. */
 const SAVE_PROBLEM: Partial<Record<NoteSaveState, string>> = {
@@ -43,7 +62,19 @@ export function noteEntityHref(note: Pick<PersonalNote, "entityType" | "entityId
     : { href: `/tasks/${id}`, label: "Nhiệm vụ" };
 }
 
-type DraftPatch = { title?: string; content?: string };
+type DraftPatch = { title?: string; content?: string; color?: PersonalNoteColor | null };
+
+/** Các loại khối của nút "Định dạng" (cùng tên với menu "Chuyển thành" của editor). Chỉ khối: in đậm, nghiêng... chưa lưu được. */
+const BLOCK_FORMATS = [
+  { type: "text", label: "Văn bản", Icon: Type },
+  { type: "heading", level: 1, label: "Tiêu đề 1", Icon: Heading1 },
+  { type: "heading", level: 2, label: "Tiêu đề 2", Icon: Heading2 },
+  { type: "heading", level: 3, label: "Tiêu đề 3", Icon: Heading3 },
+  { type: "bulleted_list", label: "Dấu đầu dòng", Icon: List },
+  { type: "numbered_list", label: "Đánh số", Icon: ListOrdered },
+  { type: "checklist", label: "Checklist", Icon: CheckSquare },
+  { type: "quote", label: "Trích dẫn", Icon: Quote },
+] as const;
 
 /**
  * Ô ghi nhanh mở ra có chuyển động (người dùng gửi ảnh ô thu gọn và lúc mở, yêu cầu thêm hiệu ứng 21/10/2026): đệm và khoảng
@@ -97,7 +128,12 @@ export function NoteEditor({
   const [title, setTitle] = React.useState(note?.title ?? "");
   const [content, setContent] = React.useState(note?.content ?? "");
   const [pinned, setPinned] = React.useState(note?.pinned ?? false);
-  const [pinError, setPinError] = React.useState(false);
+  const [color, setColor] = React.useState<PersonalNoteColor | null>(note?.color ?? null);
+  // Lỗi của thao tác đơn (ghim, đổi màu): trả giá trị cũ và báo ở thanh dưới
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [history, setHistory] = React.useState({ canUndo: false, canRedo: false });
+  const editorApiRef = React.useRef<TaskBlockEditorApi>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [editedAt, setEditedAt] = React.useState(note?.updatedAt ?? null);
   const [tooLong, setTooLong] = React.useState(false);
   const bodyRef = React.useRef<HTMLDivElement>(null);
@@ -115,21 +151,39 @@ export function NoteEditor({
   });
   const schedule = (patch: DraftPatch) => {
     onDraft(noteId, patch);
-    scheduleSave(patch);
+    // Ghi chú chưa tạo: màu và ghim chọn trước khi gõ đi cùng lần lưu đầu (chọn màu thôi thì không tạo ghi chú trống)
+    scheduleSave(noteId === null ? { ...(color ? { color } : {}), ...(pinned ? { pinned: true } : {}), ...patch } : patch);
   };
   const entity = note ? noteEntityHref(note) : null;
   const gone = state === "gone";
 
   const togglePin = async () => {
-    if (!noteId) return;
     const next = !pinned;
     setPinned(next);
-    setPinError(false);
+    setActionError(null);
+    if (!noteId) return;
     try {
       onSaved(await updateNote(noteId, { pinned: next }));
     } catch {
       setPinned(!next);
-      setPinError(true);
+      setActionError("Chưa ghim được");
+    }
+  };
+
+  const changeColor = async (next: PersonalNoteColor | null) => {
+    const previous = color;
+    if (next === previous) return;
+    setColor(next);
+    setActionError(null);
+    if (!noteId) return;
+    // Thẻ phía sau đổi màu ngay, không chờ máy chủ
+    onDraft(noteId, { color: next });
+    try {
+      onSaved(await updateNote(noteId, { color: next }));
+    } catch {
+      setColor(previous);
+      onDraft(noteId, { color: previous });
+      setActionError("Chưa đổi được màu");
     }
   };
 
@@ -188,6 +242,8 @@ export function NoteEditor({
         canEdit={!gone}
         globalFileDrop={false}
         autoFocus={variant === "dialog"}
+        apiRef={editorApiRef}
+        onHistoryChange={setHistory}
         ariaLabel={collapsed ? "Viết ghi chú mới" : "Nội dung ghi chú"}
         placeholder={collapsed ? "Ghi chú…" : "Ghi chú… Gõ / để chèn danh sách, tiêu đề, ảnh"}
       />
@@ -199,7 +255,8 @@ export function NoteEditor({
   return (
     <div
       data-slot="note-editor"
-      className="flex min-h-0 flex-1 flex-col"
+      data-note-color={color ?? undefined}
+      className={cn("flex min-h-0 flex-1 flex-col", variant === "capture" && "rounded-lg")}
       onKeyDown={collapsed ? undefined : handleKeyDown}
       onKeyDownCapture={collapsed ? undefined : handleKeyDownCapture}
     >
@@ -214,6 +271,7 @@ export function NoteEditor({
       >
         {!collapsed && (
           <Reveal animate={variant === "capture"}>
+            <div className="flex items-start gap-2">
             <Textarea
               variant="bare"
               compact
@@ -238,8 +296,21 @@ export function NoteEditor({
                   focusBody();
                 }
               }}
-              className="py-0 text-base font-semibold leading-snug tracking-tight text-foreground sm:text-base"
+              className="min-w-0 flex-1 py-0 text-base font-semibold leading-snug tracking-tight text-foreground sm:text-base"
             />
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              title={pinned ? "Bỏ ghim" : "Ghim"}
+              aria-label={pinned ? "Bỏ ghim ghi chú" : "Ghim ghi chú"}
+              aria-pressed={pinned}
+              disabled={gone}
+              onClick={() => void togglePin()}
+              className="-mr-1.5 -mt-0.5 shrink-0"
+            >
+              {pinned ? <PinOff /> : <Pin />}
+            </Button>
+            </div>
           </Reveal>
         )}
         {contentField}
@@ -261,28 +332,59 @@ export function NoteEditor({
       </div>
       {!collapsed && (
         <Reveal animate={variant === "capture"}>
-          <footer className="flex h-11 shrink-0 items-center gap-1 px-2.5 md:px-4.5">
-            {/* Chưa gõ gì thì chưa có ghi chú để ghim hay xóa */}
+          <footer className="flex h-11 shrink-0 items-center gap-0.5 px-2.5 md:px-4.5">
+            {/* Thanh công cụ như Google Keep. Chỉ có việc ghi chú làm được: nhắc giờ, mời người cùng sửa, lưu trữ chưa có */}
+            <MenuRoot modal={false}>
+              <MenuTrigger asChild>
+                <Button variant="ghost" size="icon-xs" title="Định dạng" aria-label="Định dạng đoạn" disabled={gone} className="data-[popup-open]:bg-accent">
+                  <Type />
+                </Button>
+              </MenuTrigger>
+              <MenuContent side="top" align="start" className="w-48 min-w-0" positionerClassName="z-[60]" mobileSheet sheetTitle="Định dạng">
+                {BLOCK_FORMATS.map((format) => (
+                  <MenuActionItem
+                    key={`${format.type}-${"level" in format ? format.level : ""}`}
+                    leading={<format.Icon />}
+                    onClick={() => editorApiRef.current?.turnInto(format)}
+                  >
+                    {format.label}
+                  </MenuActionItem>
+                ))}
+              </MenuContent>
+            </MenuRoot>
+            <NoteColorPicker value={color} onChange={(next) => void changeColor(next)} disabled={gone} />
+            <Button variant="ghost" size="icon-xs" title="Thêm ảnh" aria-label="Thêm ảnh" disabled={gone} onClick={() => fileInputRef.current?.click()}>
+              <ImagePlus />
+            </Button>
+            {/* design-lint-ignore no-raw-control: ô chọn tệp ẩn, mở bằng nút "Thêm ảnh" bên trên */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              tabIndex={-1}
+              aria-hidden
+              className="sr-only"
+              onChange={(event) => {
+                const files = event.target.files;
+                if (files?.length) editorApiRef.current?.addFiles(files);
+                event.target.value = "";
+              }}
+            />
+            <Button variant="ghost" size="icon-xs" title="Hoàn tác (⌘Z)" aria-label="Hoàn tác" disabled={gone || !history.canUndo} onClick={() => editorApiRef.current?.undo()}>
+              <Undo2 />
+            </Button>
+            <Button variant="ghost" size="icon-xs" title="Làm lại (⌘⇧Z)" aria-label="Làm lại" disabled={gone || !history.canRedo} onClick={() => editorApiRef.current?.redo()}>
+              <Redo2 />
+            </Button>
+            {/* Chưa gõ gì thì chưa có ghi chú để xóa */}
             {noteId && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
-                  title={pinned ? "Bỏ ghim" : "Ghim"}
-                  aria-label={pinned ? "Bỏ ghim ghi chú" : "Ghim ghi chú"}
-                  aria-pressed={pinned}
-                  disabled={gone}
-                  onClick={() => void togglePin()}
-                >
-                  {pinned ? <PinOff /> : <Pin />}
-                </Button>
-                <Button variant="ghost" size="icon-xs" title="Xóa ghi chú" aria-label="Xóa ghi chú" onClick={() => onDelete(noteId)}>
-                  <Trash2 />
-                </Button>
-              </>
+              <Button variant="ghost" size="icon-xs" title="Xóa ghi chú" aria-label="Xóa ghi chú" onClick={() => onDelete(noteId)}>
+                <Trash2 />
+              </Button>
             )}
-            <span role="status" aria-live="polite" className="ml-auto text-xs text-destructive">
-              {pinError ? "Chưa ghim được" : tooLong ? "Ghi chú quá dài, phần mới chưa lưu" : SAVE_PROBLEM[state]}
+            <span role="status" aria-live="polite" className="ml-auto truncate pr-1 text-xs text-destructive">
+              {actionError ?? (tooLong ? "Ghi chú quá dài, phần mới chưa lưu" : SAVE_PROBLEM[state])}
             </span>
             {state === "error" && (
               <Button variant="ghost" size="xs" onClick={() => void retry()}>
