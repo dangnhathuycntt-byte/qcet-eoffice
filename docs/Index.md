@@ -12,6 +12,7 @@ Hướng dẫn agent duy nhất: [AGENTS.md](../AGENTS.md). Chỉ đọc phần 
 | Đặc tả và bất biến | [Product](product/), [specs](product/specs/), [Document Workspace](product/specs/document-workspace.md), [UI/UX danh sách và Quick View (đề xuất)](product/specs/document-workspace.md#document-uiux-20261009), [invariants](product/invariants.md) |
 | Khoảng trống chức năng Nhiệm vụ và Văn bản | [Spec gap nhiệm vụ và văn bản](product/specs/task-document-gap-spec.md) — đề xuất, chờ duyệt; các quyết định mở ở mục 3 và 8 |
 | Rà soát và đề xuất UI/UX Hộp thư | [Inbox Workspace](product/specs/inbox-workspace.md) — audit ảnh/source, nghiên cứu web, spec và tiêu chí nghiệm thu; chưa duyệt triển khai |
+| Rà soát UI/UX module Văn bản (23/10/2026) | [Document module audit](product/specs/document-module-uiux-audit-2026-10-23.md) — luồng người dùng, phát hiện theo thành phần, nghiên cứu web, thứ tự làm; đề xuất, chưa duyệt; các câu hỏi chủ sở hữu ở §11 chưa quyết |
 | Nguồn thiết kế và token hiện tại | [DESIGN](../DESIGN.md) |
 | Bộ thiết kế được chọn | `design-archives/qcet-design-nen-tang-nhiem-vu.zip` (bản lưu cục bộ; chưa có thư mục giải nén trong checkout) |
 | Bảng bàn giao để tham khảo | [Design handoff](design-handoff/INDEX.md); không tự thay thế bộ được chọn |
