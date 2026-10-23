@@ -403,7 +403,7 @@ function ReplyTurn({
         <div className="flex flex-col gap-1.5">
           <p className="flex items-baseline gap-2 text-compact">
             <span className="animate-text-shimmer">
-              {stepLabels.length === 0 ? "Đang suy nghĩ…" : composeNoun(message) ? `Đang soạn ${composeNoun(message)}…` : "Đang đọc dữ liệu…"}
+              {composeNoun(message) ? `Đang soạn ${composeNoun(message)}…` : message.toolsRunning ? "Đang đọc dữ liệu…" : "Đang suy nghĩ…"}
             </span>
             {progress.length > 0 ? (
               <span data-slot="assistant-run-progress" className="text-xs text-muted-foreground tabular-nums">

@@ -348,6 +348,8 @@ export type AssistantStreamEvent =
   /** Cuộc mới: tên do mô hình đặt thay cho tên lấy từ câu hỏi, phát trước `done`. */
   | { type: "title"; conversation: AssistantConversationSummaryDTO }
   | { type: "context"; source: AssistantSourceRef }
+  /** Các công cụ của vòng này bắt đầu chạy (mô hình đã gọi xong); `step` tới khi chúng xong. Giữa hai lúc đó mô hình mới là bên đang nghĩ. */
+  | { type: "tool_start" }
   | { type: "step"; step: AssistantStep }
   | { type: "thinking"; delta: string }
   | { type: "text"; delta: string }

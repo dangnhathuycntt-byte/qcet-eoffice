@@ -1366,6 +1366,21 @@ describe("Trợ lý UI: tiến độ trực tiếp của lượt dài", () => {
     assert.equal(formatDurationVi(120), "2 phút");
   });
 
+  test("dòng trạng thái: công cụ đang chạy mới ghi 'Đang đọc dữ liệu', chờ mô hình sau bước đọc thì ghi 'Đang suy nghĩ'", () => {
+    const readStep = { tool: "get_meeting_recording", label: "Nghe bản ghi “Ghi trực tiếp”", count: null, ok: true } as const;
+    let reply = streamingThreadMessage("r-phase", Date.now() - 2_000);
+    reply = reduceAssistantReply(reply, { type: "tool_start" });
+    assert.ok(renderThread(reply).includes("Đang đọc dữ liệu…"), "công cụ đang chạy");
+
+    reply = reduceAssistantReply(reply, { type: "step", step: readStep });
+    const waiting = renderThread(reply);
+    assert.ok(waiting.includes("Đang suy nghĩ…") && !waiting.includes("Đang đọc dữ liệu…"), "bước đọc xong, mô hình đang nghĩ vòng sau");
+
+    reply = reduceAssistantReply(reply, { type: "tool_start" });
+    reply = reduceAssistantReply(reply, { type: "thinking", delta: "Next, " });
+    assert.ok(renderThread(reply).includes("Đang suy nghĩ…"), "mô hình nghĩ thì hết cờ công cụ dù sự kiện tool_start tới trước");
+  });
+
   test("đang chạy: đồng hồ từ lúc gửi và số đề xuất đã soạn cạnh nhãn; xong thì nhãn ghi tổng thời gian theo phút", () => {
     let reply = streamingThreadMessage("r-long", Date.now() - 65_000);
     reply = reduceAssistantReply(reply, { type: "step", step: { tool: "propose_task", label: "Soạn đề xuất “Tuyển sinh”", count: null, ok: true } });
