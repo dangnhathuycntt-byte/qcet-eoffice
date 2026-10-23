@@ -187,7 +187,7 @@ export function AssistantThread({
             onClick={scrollToBottom}
             aria-label="Cuộn xuống tin mới nhất"
             title="Cuộn xuống tin mới nhất"
-            className={cn("pointer-events-auto -translate-y-full rounded-full bg-background shadow-sm", ENTER_MOTION)}
+            className={cn("pointer-events-auto -translate-y-full rounded-full bg-background shadow-low", ENTER_MOTION)}
           >
             <ArrowDown />
           </Button>

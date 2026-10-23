@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
  */
 const PANEL_CLASS =
   "fixed bottom-9 right-4 z-30 flex h-150 max-md:hidden max-h-[calc(100dvh-4rem)] w-100 flex-col overflow-hidden rounded-[calc(var(--radius-xl)+0.5rem)] bg-popover " +
-  "shadow-[0_0_0_1px_rgb(26_29_35/0.08),0_16px_40px_-12px_rgb(26_29_35/0.22),0_4px_12px_-4px_rgb(26_29_35/0.08)] " +
+  "shadow-dialog " +
   "animate-in fade-in-0 slide-in-from-bottom-2 duration-[var(--motion-duration-normal)] ease-[var(--motion-ease-enter)]";
 
 export interface AssistantDockPanelProps {

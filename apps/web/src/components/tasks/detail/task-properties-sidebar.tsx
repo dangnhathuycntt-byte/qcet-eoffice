@@ -360,7 +360,7 @@ export function TaskPropertiesSidebar({
       )}
     >
       {/* 1. SECTION: PROPERTIES */}
-      <div className="space-y-3 rounded-lg border border-border/70 bg-card p-3 shadow-2xs">
+      <div className="space-y-3 rounded-lg border border-border/70 bg-card p-3 shadow-low">
         {/* Section Header */}
         <div className="flex items-center justify-between text-muted-foreground">
           <span className="text-xs font-semibold text-foreground">Thuộc tính</span>
@@ -595,7 +595,7 @@ export function TaskPropertiesSidebar({
       </div>
 
       {subTasks && onSelectSubtask && (
-        <div className="rounded-lg border border-border/70 bg-card p-3 shadow-2xs">
+        <div className="rounded-lg border border-border/70 bg-card p-3 shadow-low">
           <TaskSubtasksSidebarSection
             subTasks={subTasks}
             activeSubtaskId={activeSubtaskId}

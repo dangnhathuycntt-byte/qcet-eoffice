@@ -55,7 +55,7 @@ export function TaskPropertiesDrawer({
           data-slot="task-properties-drawer"
           aria-label="Bảng thuộc tính nhiệm vụ"
           className={cn(
-            "fixed inset-y-0 right-0 z-50 w-full max-w-sm h-full bg-background border-l border-border shadow-2xl flex flex-col focus:outline-none",
+            "fixed inset-y-0 right-0 z-50 w-full max-w-sm h-full bg-background border-l border-border shadow-sheet flex flex-col focus:outline-none",
             className
           )}
         >

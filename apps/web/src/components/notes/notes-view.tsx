@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StandardDialog } from "@/components/ui/dialog";
-import { DestructiveConfirmDialog } from "@/components/ui/destructive-confirm-dialog";
+import { showUndoToast } from "@/components/ui/undo-toast";
 import { useFeedback } from "@/components/ui/feedback-layer";
 import { PaneSearchHeader } from "@/components/workspace/pane-search-header";
 import { NoteCard } from "@/components/notes/note-card";
@@ -55,8 +55,6 @@ export function NotesView() {
   const [query, setQuery] = React.useState("");
   const [loaded, setLoaded] = React.useState<LoadedNote | null>(null);
   const [loadAttempt, setLoadAttempt] = React.useState(0);
-  const [deleting, setDeleting] = React.useState<{ id: string; title: string } | null>(null);
-  const [isDeleting, setIsDeleting] = React.useState(false);
   // Ô ghi nhanh: mỗi lượt mở một trình soạn mới (`captureKey`); ghi chú tạo trong lượt đó chỉ hiện thành thẻ khi đóng ô
   const [captureOpen, setCaptureOpen] = React.useState(false);
   const [captureKey, setCaptureKey] = React.useState(0);
@@ -247,31 +245,36 @@ export function NotesView() {
     }
   };
 
-  const askDelete = (id: string) => {
-    const summary = notes.find((item) => item.id === id);
-    const title = cacheRef.current.get(id)?.title || summary?.title || summary?.excerpt || "Ghi chú trống";
-    setDeleting({ id, title });
-  };
-
-  const confirmDelete = async () => {
-    if (!deleting) return;
-    setIsDeleting(true);
-    try {
-      await deleteNote(deleting.id);
-    } catch (error) {
-      // 404: đã xóa ở nơi khác, coi như xong
-      if (!(error instanceof NotesRequestError && error.status === 404)) {
-        notifyError(error instanceof Error ? error.message : "Không xóa được ghi chú.");
-        setIsDeleting(false);
-        return;
-      }
-    }
-    cacheRef.current.delete(deleting.id);
-    setNotes((prev) => prev.filter((item) => item.id !== deleting.id));
-    if (selectedId === deleting.id) closeNote();
-    if (captureNoteId === deleting.id) closeCapture();
-    setDeleting(null);
-    setIsDeleting(false);
+  /**
+   * Xóa ghi chú có Hoàn tác thay cho hộp xác nhận (ghi chú cá nhân, một mục, thẻ biến mất ngay trước mắt, hoãn vài giây không ảnh
+   * hưởng ai: xem `ui/undo-toast`). Thẻ ẩn ngay, yêu cầu xóa đi khi toast đóng; Hoàn tác đưa thẻ về đúng chỗ.
+   */
+  const deleteWithUndo = (id: string) => {
+    const index = notes.findIndex((item) => item.id === id);
+    if (index < 0) return;
+    const summary = notes[index];
+    const title = cacheRef.current.get(id)?.title || summary.title || summary.excerpt || "Ghi chú trống";
+    setNotes((prev) => prev.filter((item) => item.id !== id));
+    if (selectedId === id) closeNote();
+    if (captureNoteId === id) closeCapture();
+    showUndoToast({
+      message: `Đã xóa ghi chú “${title.length > 40 ? `${title.slice(0, 40)}…` : title}”`,
+      restore: () => {
+        // Bản trong bộ nhớ đệm mới hơn thẻ cũ nếu người dùng vừa sửa rồi xóa
+        const latest = cacheRef.current.get(id);
+        setNotes((prev) => (prev.some((item) => item.id === id) ? prev : sortNotes([...prev, latest ? toNoteSummary(latest) : summary])));
+      },
+      commit: async ({ keepalive }) => {
+        try {
+          await deleteNote(id, { keepalive });
+        } catch (error) {
+          // 404: đã xóa ở nơi khác, coi như xong
+          if (!(error instanceof NotesRequestError && error.status === 404)) throw error;
+        }
+        cacheRef.current.delete(id);
+      },
+      onError: (error) => notifyError(error instanceof Error ? error.message : "Không xóa được ghi chú. Ghi chú đã được đưa về lại."),
+    });
   };
 
   const hasQuery = query.length > 0;
@@ -289,21 +292,8 @@ export function NotesView() {
   );
   const isEmpty = pinnedNotes.length === 0 && otherNotes.length === 0;
 
-  const deleteConfirm = (
-    <DestructiveConfirmDialog
-      isOpen={Boolean(deleting)}
-      onClose={() => !isDeleting && setDeleting(null)}
-      onConfirm={confirmDelete}
-      isConfirming={isDeleting}
-      title="Xóa ghi chú?"
-      entityLabel="Ghi chú"
-      entityName={deleting?.title}
-      description="Nội dung ghi chú sẽ mất hẳn."
-    />
-  );
-
   const renderCard = (item: PersonalNoteSummary) => (
-    <NoteCard item={item} onOpen={() => openNote(item.id)} onTogglePin={() => void togglePin(item)} onDelete={() => askDelete(item.id)} />
+    <NoteCard item={item} onOpen={() => openNote(item.id)} onTogglePin={() => void togglePin(item)} onDelete={() => deleteWithUndo(item.id)} />
   );
 
   return (
@@ -331,7 +321,7 @@ export function NotesView() {
               {...(captureOpen ? captureFocusHandlers : {})}
               className={cn(
                 "mx-auto w-full max-w-[600px] rounded-lg border border-border bg-card transition-shadow",
-                captureOpen ? "shadow-md" : "shadow-sm"
+                captureOpen ? "shadow-menu" : "shadow-low"
               )}
             >
               <NoteEditor
@@ -344,7 +334,7 @@ export function NotesView() {
                 onSaved={handleSaved}
                 onCreated={(note) => handleCaptureCreated(note, captureKey)}
                 onDraft={handleDraft}
-                onDelete={askDelete}
+                onDelete={deleteWithUndo}
               />
             </div>
           )}
@@ -426,7 +416,7 @@ export function NotesView() {
               onSaved={handleSaved}
               onCreated={() => undefined}
               onDraft={handleDraft}
-              onDelete={askDelete}
+              onDelete={deleteWithUndo}
             />
           </div>
         ) : shown?.state === "missing" || shown?.state === "error" ? (
@@ -454,11 +444,9 @@ export function NotesView() {
           </div>
         )}
         {/* Lồng trong hộp sửa để Base UI coi là hộp con: hộp mở ở gốc trang bị lớp phủ của hộp sửa chặn, không bấm được */}
-        {selectedId && deleteConfirm}
       </StandardDialog>
 
       {/* Xóa từ thẻ: hộp xác nhận ở trang; xóa từ hộp sửa: lồng trong hộp sửa (xem dưới) */}
-      {!selectedId && deleteConfirm}
     </div>
   );
 }

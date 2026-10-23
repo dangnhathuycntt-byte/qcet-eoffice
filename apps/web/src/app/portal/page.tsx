@@ -45,7 +45,7 @@ function PortalLiveClock() {
   if (!timeStr) return null;
 
   return (
-    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/80 border border-border/60 text-xs font-mono font-bold text-foreground shadow-2xs">
+    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-card/80 border border-border/60 text-xs font-mono font-bold text-foreground shadow-low">
       <Clock size={13} className="text-primary" />
       <span className="tabular-nums">{timeStr}</span>
     </div>
@@ -187,7 +187,8 @@ export default function PortalPage() {
           <Link
             href="/dashboard"
             aria-label="Mở Dashboard Điều Hành & Báo Cáo KPI"
-            className="lg:col-span-7 relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-7 md:p-8 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
+            // design-lint-ignore no-arbitrary-radius: trang cổng công khai /portal giữ thẻ bo 32px theo thang website của Linear
+            className="lg:col-span-7 relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-7 md:p-8 shadow-low hover:shadow-menu transition-[color,background-color,border-color,box-shadow,opacity,transform] flex flex-col justify-between overflow-hidden group cursor-pointer"
           >
             {/* Top header within card */}
             <div>
@@ -210,7 +211,7 @@ export default function PortalPage() {
 
               {/* Two Micro Feature Pills */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 mt-7">
-                <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-2xs">
+                <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-low">
                   <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <Activity size={17} aria-hidden="true" />
                   </div>
@@ -229,7 +230,7 @@ export default function PortalPage() {
                   </div>
                 </div>
 
-                <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-2xs">
+                <div className="p-3.5 rounded-2xl bg-background/80 border border-border/70 flex items-center gap-3 shadow-low">
                   <div className="size-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
                     <CheckCircle2 size={17} aria-hidden="true" />
                   </div>
@@ -255,7 +256,7 @@ export default function PortalPage() {
               <span className="text-xs font-semibold text-primary">
                 Khởi chạy Dashboard điều hành
               </span>
-              <span className="size-10 rounded-full bg-primary text-white flex items-center justify-center shadow-xs group-hover:bg-primary/90 transition-colors">
+              <span className="size-10 rounded-full bg-primary text-white flex items-center justify-center shadow-low group-hover:bg-primary/90 transition-colors">
                 <ArrowUpRight size={18} aria-hidden="true" />
               </span>
             </div>
@@ -267,7 +268,8 @@ export default function PortalPage() {
             <Link
               href="/tasks"
               aria-label="Mở bảng Quản Lý Công Việc 2 Cấp"
-              className="relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-6 md:p-7 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
+              // design-lint-ignore no-arbitrary-radius: trang cổng công khai /portal giữ thẻ bo 32px theo thang website của Linear
+              className="relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-6 md:p-7 shadow-low hover:shadow-menu transition-[color,background-color,border-color,box-shadow,opacity,transform] flex flex-col justify-between overflow-hidden group cursor-pointer"
             >
               <div>
                 <div className="flex items-center justify-between gap-4">
@@ -298,7 +300,8 @@ export default function PortalPage() {
             <Link
               href="/meetings"
               aria-label="Mở Cuộc họp & Cơ Cấu Tổ Chức"
-              className="relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-6 md:p-7 shadow-xs hover:shadow-md transition-all flex flex-col justify-between overflow-hidden group cursor-pointer"
+              // design-lint-ignore no-arbitrary-radius: trang cổng công khai /portal giữ thẻ bo 32px theo thang website của Linear
+              className="relative rounded-[2rem] border border-border/70 bg-card/80 backdrop-blur-xl p-6 md:p-7 shadow-low hover:shadow-menu transition-[color,background-color,border-color,box-shadow,opacity,transform] flex flex-col justify-between overflow-hidden group cursor-pointer"
             >
               <div>
                 <div className="flex items-center justify-between gap-4">

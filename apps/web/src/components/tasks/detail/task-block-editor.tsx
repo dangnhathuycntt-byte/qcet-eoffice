@@ -653,7 +653,7 @@ function MentionInputElement({ attributes, children, element }: RenderElementPro
   return (
     <span {...attributes} className="relative inline">
       <span className="text-primary font-medium">@{query}</span>
-      <div contentEditable={false} className="absolute left-0 top-full mt-1 z-50 w-64 origin-top-left rounded-lg border border-border/80 bg-card p-1 shadow-lg animate-in fade-in-0 zoom-in-95 duration-100">
+      <div contentEditable={false} className="absolute left-0 top-full mt-1 z-50 w-64 origin-top-left rounded-lg border border-border/80 bg-card p-1 shadow-menu animate-in fade-in-0 zoom-in-95 duration-100">
         <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">Nhân sự QCET</div>
         <div className="max-h-48 overflow-y-scroll space-y-0.5">
           {filtered.map((staff) => (
@@ -696,7 +696,7 @@ function MediaEmbedEl({ attributes, children, element }: any) {
 
   return (
     <div {...attributes} className="my-3">
-      <div contentEditable={false} className="aspect-video w-full rounded-xl overflow-hidden border border-border/60 bg-muted/20 shadow-2xs">
+      <div contentEditable={false} className="aspect-video w-full rounded-xl overflow-hidden border border-border/60 bg-muted/20 shadow-low">
         {url ? (
           <iframe
             src={url.includes("youtube.com/watch?v=") ? url.replace("watch?v=", "embed/") : url}
@@ -880,7 +880,7 @@ function ImageEl({ attributes, children, element }: any) {
               data-image-frame=""
               style={{ width: `${imageWidth}%` }}
               className={cn(
-                "relative mx-auto transition-all duration-150 group-data-[image-row=true]/block:w-full!",
+                "relative mx-auto transition-[width,opacity] duration-150 group-data-[image-row=true]/block:w-full!",
                 // Kéo bằng ảnh thì mờ như kéo bằng tay kéo (cờ isDragging của khối chỉ theo tay kéo)
                 imageDragging && "opacity-50"
               )}
@@ -928,7 +928,7 @@ function ImageEl({ attributes, children, element }: any) {
               )}
               {isUploading && (
                 <div className="absolute inset-0 bg-background/60 backdrop-blur-2xs flex items-center justify-center rounded-lg">
-                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/90 shadow-sm border border-border text-xs text-foreground font-medium">
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-background/90 shadow-low border border-border text-xs text-foreground font-medium">
                     <Spinner tone="primary" />
                     <span>Đang tải ảnh lên máy chủ...</span>
                   </div>
@@ -1024,7 +1024,7 @@ function ImageEl({ attributes, children, element }: any) {
             </div>
             <div className="flex items-center gap-2">
               {uploadError && <span className="text-destructive text-xs">{uploadError}</span>}
-              <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-2xs">
+              <label className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-primary text-primary-foreground font-medium hover:opacity-90 transition-opacity cursor-pointer shadow-low">
                 {isUploading ? <Spinner /> : <UploadCloud className="size-3.5" />}
                 <span>{isUploading ? "Đang tải ảnh..." : "Tải ảnh lên"}</span>
                 <input type="file"
@@ -1094,7 +1094,7 @@ function AttachmentEl({ attributes, children, element }: any) {
       <FileText className="size-3.5 text-muted-foreground shrink-0" />
       <span className="min-w-0 font-medium text-foreground truncate" title={fileName || undefined}>{fileName || "Tệp"}</span>
       {meta && <span className="text-muted-foreground shrink-0 font-mono">{meta}</span>}
-      {url && <ExternalLink className="size-3 text-muted-foreground opacity-0 group-hover/file:opacity-100 transition-opacity shrink-0" />}
+      {url && <ExternalLink aria-hidden className="size-3 text-muted-foreground opacity-0 group-hover/file:opacity-100 transition-opacity shrink-0" />}
     </div>
   );
   return (
@@ -1177,7 +1177,7 @@ function BookmarkEl({ attributes, children, element }: any) {
     <div {...attributes}>
       <div contentEditable={false} className="py-0.5">
         {url ? (
-          <div className="flex items-center gap-3 p-3 my-1.5 rounded-xl bg-card border border-border/70 hover:border-primary/40 hover:bg-muted/30 transition-all text-xs shadow-2xs group/bm">
+          <div className="flex items-center gap-3 p-3 my-1.5 rounded-xl bg-card border border-border/70 hover:border-primary/40 hover:bg-muted/30 transition-[color,background-color,border-color,box-shadow,opacity,transform] text-xs shadow-low group/bm">
             {thumbnailUrl ? (
               <img src={thumbnailUrl} alt="" loading="lazy" width={40} height={40} className="size-10 rounded-lg object-cover shrink-0" />
             ) : favicon ? (
@@ -1289,7 +1289,7 @@ function ToolbarDropdown({
           ref={(el) => { (panelRef as any).current = el; refs.setFloating(el); }}
           style={{ ...floatingStyles, transformOrigin: floatingOrigin(placement) }}
           className={cn(
-            "z-[100] min-w-[140px] rounded-lg border border-border/80 bg-card p-1 shadow-lg",
+            "z-[100] min-w-[140px] rounded-lg border border-border/80 bg-card p-1 shadow-menu",
             FLOATING_ENTER_CLASS,
             className,
           )}
@@ -1568,7 +1568,7 @@ function FloatingToolbar({ editor }: { editor: any }) {
     <div
       ref={refs.setFloating}
       style={{ ...floatingStyles, transformOrigin: floatingOrigin(placement) }}
-      className={cn("z-50 flex items-center gap-0.5 rounded-lg border border-border/80 bg-card p-0.5 shadow-lg", FLOATING_ENTER_CLASS)}
+      className={cn("z-50 flex items-center gap-0.5 rounded-lg border border-border/80 bg-card p-0.5 shadow-menu", FLOATING_ENTER_CLASS)}
     >
       {marks.map(({ key, icon: Icon, label }) => (
         <Pressable
@@ -2873,7 +2873,7 @@ export function TaskBlockEditor({
             data-testid="global-file-drop-overlay"
             className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm border-4 border-dashed border-primary/60 animate-in fade-in-0 duration-150 pointer-events-none"
           >
-            <div className="p-4 rounded-2xl bg-card border border-border shadow-2xl flex flex-col items-center gap-3 text-center max-w-sm">
+            <div className="p-4 rounded-2xl bg-card border border-border shadow-dialog flex flex-col items-center gap-3 text-center max-w-sm">
               <div className="p-3 rounded-full bg-primary/10 text-primary">
                 <UploadCloud className="size-8 motion-safe:animate-pulse" />
               </div>

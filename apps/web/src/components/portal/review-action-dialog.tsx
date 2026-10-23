@@ -338,14 +338,14 @@ export function ReviewActionDialog({
                     onClick={() => handleDecisionChange(opt.id)}
                     disabled={isProcessing}
                     className={cn(
-                      "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-all select-none min-h-[56px] active:scale-[0.98]",
+                      "relative flex flex-col items-start p-3.5 rounded-xl border-2 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] select-none min-h-[56px] active:scale-[0.98]",
                       "hover:border-primary/50 focus:outline-hidden",
                       isSelected
                         ? opt.accentColor === "emerald"
-                          ? "border-emerald-600 bg-emerald-500/10 text-emerald-950 shadow-xs"
+                          ? "border-emerald-600 bg-emerald-500/10 text-emerald-950 shadow-low"
                           : opt.accentColor === "amber"
-                          ? "border-warning bg-warning/10 text-warning shadow-xs"
-                          : "border-destructive bg-destructive/10 text-destructive shadow-xs"
+                          ? "border-warning bg-warning/10 text-warning shadow-low"
+                          : "border-destructive bg-destructive/10 text-destructive shadow-low"
                         : "border-border/80 bg-background hover:bg-muted/40 text-foreground"
                     )}
                   >
@@ -487,7 +487,7 @@ export function ReviewActionDialog({
               onClick={handleSubmit}
               disabled={isProcessing}
               className={cn(
-                "w-full sm:w-auto min-h-[44px] min-w-36 font-semibold text-white shadow-xs transition-all rounded-xl text-xs sm:text-sm",
+                "w-full sm:w-auto min-h-[44px] min-w-36 font-semibold text-white shadow-low transition-[color,background-color,border-color,box-shadow,opacity,transform] rounded-xl text-xs sm:text-sm",
                 activeDecisionConfig.accentColor === "emerald" &&
                   "bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800",
                 activeDecisionConfig.accentColor === "amber" &&

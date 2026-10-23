@@ -56,6 +56,7 @@ import {
   useNow,
 } from "@/components/inbox/inbox-row";
 import { archiveNotificationsRequest } from "@/components/inbox/notification-actions";
+import { MotionDiv } from "@/components/motion/motion-list";
 
 export { getInboxEmptyCopy, type InboxEmptyCopy } from "@/components/inbox/inbox-row";
 
@@ -753,7 +754,7 @@ export function InboxView() {
               )
             ) : (
               <>
-                <div ref={listRef} role="listbox" aria-label="Danh sách thông báo" className="space-y-0.5">
+                <MotionDiv ref={listRef} role="listbox" aria-label="Danh sách thông báo" className="space-y-0.5">
                   {visibleGroups.map((group, index) => (
                     <InboxRow
                       key={group.key}
@@ -775,7 +776,7 @@ export function InboxView() {
                       onKeyDown={(e) => handleRowKeyDown(e, index)}
                     />
                   ))}
-                </div>
+                </MotionDiv>
                 {(nextCursor || loadMoreError) && (
                   <div className="flex items-center justify-center gap-2 pt-2 text-xs text-muted-foreground">
                     {loadMoreError && <span>Không tải thêm được.</span>}

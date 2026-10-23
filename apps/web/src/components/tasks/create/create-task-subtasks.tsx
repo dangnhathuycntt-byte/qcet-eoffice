@@ -16,6 +16,7 @@ import { CREATE_TASK_MAX_SUBTASKS } from "@qcet/contracts/tasks";
 import { motionDuration, motionEase } from "@/lib/motion/tokens";
 import type { CreateTaskSubtaskFormItem } from "@/hooks/use-create-task-form";
 import type { DepartmentPersonnel } from "@/hooks/use-department-list";
+import { MotionUl } from "@/components/motion/motion-list";
 
 const EMPTY_DRAFT = { title: "", description: "", assigneeId: "", dueDate: "" };
 const MIN_TITLE = 3;
@@ -166,7 +167,7 @@ export function CreateTaskSubtasks({ items, onChange, people, loadingPeople, par
       </div>
 
       {items.length > 0 && (
-        <ul className="border-t border-border/60">
+        <MotionUl className="border-t border-border/60">
           {items.map((item) => {
             return (
               <li key={item.id} className="group flex h-9 items-center gap-1 pr-1.5 pl-3">
@@ -210,7 +211,7 @@ export function CreateTaskSubtasks({ items, onChange, people, loadingPeople, par
               </li>
             );
           })}
-        </ul>
+        </MotionUl>
       )}
 
       {/* Thẻ soạn giãn/thu chiều cao như khối Milestones của Linear (đo ~180ms ease-out); reduced motion chỉ còn mờ dần.

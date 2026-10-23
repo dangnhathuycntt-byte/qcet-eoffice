@@ -192,7 +192,7 @@ export function NotificationCenter() {
             className={cn(
               "px-4 py-1.5 rounded-lg text-xs font-medium transition-colors active:scale-[0.98] min-h-[44px] sm:min-h-0",
               filter === tab.key
-                ? "bg-card text-foreground shadow-sm"
+                ? "bg-card text-foreground shadow-low"
                 : "text-muted-foreground hover:text-foreground"
             )}
           >
@@ -463,7 +463,8 @@ function NotificationCenterRow({ item, onRead }: NotificationCenterRowProps) {
                 e.stopPropagation();
                 onRead();
               }}
-              className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg hover:bg-muted hover:shadow-xs text-muted-foreground hover:text-foreground transition-all active:scale-[0.98] focus-visible:opacity-100"
+              className="opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 [@media(hover:none)]:opacity-100 p-1.5 rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground transition-[opacity,background-color,color] active:scale-[0.98] focus-visible:opacity-100"
+              aria-label="Đánh dấu là đã đọc"
               title="Đánh dấu là đã đọc"
             >
               <Check size={14} />

@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MotionUl } from "@/components/motion/motion-list";
 
 interface InboxRow {
   id: string;
@@ -125,7 +126,7 @@ export function UnitRequestInbox({ className }: { className?: string }) {
           description="Yêu cầu phối hợp gửi đến đơn vị sẽ hiện ở đây."
         />
       )}
-      <ul className="space-y-2">
+      <MotionUl className="space-y-2">
         {(rows ?? []).map((row) => (
           <li key={row.id} className="rounded-lg border border-border bg-card p-3">
             <p className="text-compact font-medium text-foreground">{row.task.title}</p>
@@ -182,7 +183,7 @@ export function UnitRequestInbox({ className }: { className?: string }) {
             )}
           </li>
         ))}
-      </ul>
+      </MotionUl>
     </section>
   );
 }

@@ -101,7 +101,8 @@ export function GoogleLoginButton({
         onClick={handleStartOAuth}
         aria-label={isLoading ? "Đang chuyển sang Google…" : label}
         aria-busy={isLoading}
-        className="flex h-[52px] min-[600px]:h-12 w-full items-center justify-center gap-2.5 rounded-[14px] shadow-[inset_0_0_0_1px_var(--google-btn-edge)] bg-[var(--google-btn-bg)] px-3 min-[600px]:px-4 text-sm font-medium text-[var(--google-btn-text)] hover:bg-[var(--google-btn-bg-hover)] active:bg-[var(--google-btn-bg-active)] disabled:cursor-not-allowed disabled:opacity-70 transition-colors duration-150 motion-reduce:transition-none"
+        // design-lint-ignore no-arbitrary-shadow: viền trong của nút Google theo màu thương hiệu (--google-btn-edge)
+        className="flex h-[52px] min-[600px]:h-12 w-full items-center justify-center gap-2.5 rounded-lg shadow-[inset_0_0_0_1px_var(--google-btn-edge)] bg-[var(--google-btn-bg)] px-3 min-[600px]:px-4 text-sm font-medium text-[var(--google-btn-text)] hover:bg-[var(--google-btn-bg-hover)] active:bg-[var(--google-btn-bg-active)] disabled:cursor-not-allowed disabled:opacity-70 transition-colors duration-150 motion-reduce:transition-none"
       >
         {isLoading ? (
           <span role="status" className="inline-flex items-center gap-2.5">

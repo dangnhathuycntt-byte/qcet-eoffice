@@ -27,7 +27,6 @@ import {
   getSystemReferenceDate,
 } from "@qcet/shared/lib/academic-calendar";
 import { Button } from "@/components/ui/button";
-import { confirmAction } from "@/components/ui/confirm-host";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { DashboardModalContext } from "@/components/dashboard/dashboard-context";
@@ -48,7 +47,8 @@ import {
   filterTasks,
   paginateTasks,
 } from "./utils/table-filter-engine";
-import { deleteTask, updateTaskDueDate, updateTaskPriority } from "@/lib/tasks/task-actions";
+import { updateTaskDueDate, updateTaskPriority } from "@/lib/tasks/task-actions";
+import { archiveTasksWithUndo } from "@/lib/tasks/pending-task-archive";
 import { formatTableDate } from "./utils/table-date-helpers";
 import { sortTasks } from "./utils/table-sorters";
 import { getNextSortDirection, useTaskTableState } from "./hooks/use-task-table-state";
@@ -56,7 +56,7 @@ import { useTaskUrlSync } from "./hooks/use-task-url-sync";
 import { useTaskKeyboardNav } from "./hooks/use-task-keyboard-nav";
 
 import { TaskTableHeader } from "./components/task-table-header";
-import { Table } from "@/components/ui/table";
+import { Table, TableBody } from "@/components/ui/table";
 import { TaskRow } from "./components/task-row";
 import { TaskContextMenu } from "./task-context-menu";
 import { TaskPeekPreviewModal } from "@/components/tasks/preview/task-peek-preview-modal";
@@ -143,12 +143,10 @@ export interface ModularCascadingTaskTableProps {
   onBulkExtendDeadline?: (days: number) => Promise<void> | void;
   onBulkReassign?: (newAssigneeId: string) => Promise<void> | void;
   onBulkPriorityChange?: (priority: "URGENT" | "HIGH" | "NORMAL" | "LOW" | "NONE") => Promise<void> | void;
-  onBulkDelete?: (taskIds: string[]) => Promise<void> | void;
   onPriorityChange?: (taskId: string, newPriority: TaskPriority) => Promise<void> | void;
   /** `silent`: gia hạn hàng loạt gom một thông báo, nên lỗi được ném ra thay vì báo lẻ. */
   onDueDateChange?: (taskId: string, newDueDate: string, options?: { silent?: boolean }) => Promise<void> | void;
   onAssigneeChange?: (taskId: string, newAssigneeId: string, newAssigneeName: string) => Promise<void> | void;
-  onDeleteTask?: (taskId: string) => Promise<void> | void;
   onExportExcel?: () => void;
   selectedTaskId?: string;
   emptyStateProps?: Partial<TaskEmptyStateProps>;
@@ -194,11 +192,9 @@ export function ModularCascadingTaskTable({
   onBulkExtendDeadline,
   onBulkReassign,
   onBulkPriorityChange,
-  onBulkDelete,
   onPriorityChange,
   onDueDateChange,
   onAssigneeChange,
-  onDeleteTask,
   onExportExcel,
   selectedTaskId,
   emptyStateProps,
@@ -499,22 +495,6 @@ export function ModularCascadingTaskTable({
     [onDueDateChange, tasks]
   );
 
-  const handleContextMenuDelete = React.useCallback(
-    async (taskId: string) => {
-      if (onDeleteTask) {
-        await onDeleteTask(taskId);
-      } else {
-        // Default: archive via API directly
-        const task = tasks.find((t) => t.id === taskId);
-        const result = await deleteTask(taskId, Number((task as any)?.version ?? 1) || 0);
-        if (!result.ok) {
-          throw new Error(result.error || "Không thể xóa nhiệm vụ");
-        }
-      }
-    },
-    [onDeleteTask, tasks]
-  );
-
   // 5. Data Filtering
   // When hideToolbar=true, the parent workspace has already filtered the task list.
   // Do NOT filter again to avoid double-filtering pre-filtered data from the parent.
@@ -746,37 +726,14 @@ export function ModularCascadingTaskTable({
     };
   }, [onBulkPriorityChange, tableState, tasks, feedback, onRefresh]);
 
+  // Hoàn tác thay hộp xác nhận (lib/tasks/pending-task-archive): ẩn ngay, chỉ gửi lưu trữ khi toast Hoàn tác đóng
   const effectiveOnBulkDelete = React.useMemo(() => {
-    return async (ids: string[]) => {
-      // Ngắn gọn như mọi hộp xác nhận xóa: tiêu đề đã nói rõ số lượng, không liệt kê tên từng việc
-      const ok = await confirmAction({
-        title: ids.length === 1 ? "Xóa nhiệm vụ?" : `Xóa ${ids.length} nhiệm vụ?`,
-        description: ids.length === 1 ? "Nhiệm vụ sẽ được lưu trữ và ẩn khỏi danh sách." : "Các nhiệm vụ sẽ được lưu trữ và ẩn khỏi danh sách.",
-        destructive: true,
-      });
-      if (!ok) return;
-
-      const settled = onBulkDelete
-        ? await Promise.allSettled([Promise.resolve(onBulkDelete(ids))]).then((r) => ids.map(() => r[0]))
-        : await Promise.allSettled(ids.map((id) => handleContextMenuDelete(id)));
-      const okIds = ids.filter((_, i) => settled[i].status === "fulfilled");
-      const failed = settled.filter((r): r is PromiseRejectedResult => r.status === "rejected");
-      if (typeof window !== "undefined" && okIds.length > 0) {
-        for (const taskId of okIds) {
-          window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId, optimistic: true } }));
-        }
-        window.dispatchEvent(new CustomEvent("qcet:task-archived", { detail: { taskId: null, optimistic: false } }));
-      }
-      if (failed.length === 0) {
-        feedback.notifySuccess(`Đã lưu trữ ${okIds.length} nhiệm vụ.`);
-      } else {
-        const reason = failed[0].reason instanceof Error ? `: ${failed[0].reason.message}` : "";
-        feedback.notifyWarning(`Đã lưu trữ ${okIds.length}, ${failed.length} nhiệm vụ không xóa được${reason}`);
-      }
-      // Giữ lại chọn những dòng lỗi để người dùng thử lại.
-      if (failed.length === 0) tableState.clearSelection();
+    return (ids: string[]) => {
+      const targets = ids.map((id) => ({ id, version: Number((tasks.find((t) => t.id === id) as any)?.version ?? 1) || 0 }));
+      archiveTasksWithUndo(targets, feedback);
+      tableState.clearSelection();
     };
-  }, [onBulkDelete, handleContextMenuDelete, tableState, tasks, feedback]);
+  }, [tableState, tasks, feedback]);
 
   const effectiveOnExportExcel = React.useMemo(() => {
     if (onExportExcel) return onExportExcel;
@@ -1301,7 +1258,7 @@ export function ModularCascadingTaskTable({
         <div
           role="status"
           aria-live="polite"
-          className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-primary/[0.04] border border-primary/20 text-xs sm:text-sm font-semibold text-primary shadow-2xs"
+          className="flex items-center justify-between gap-3 px-3.5 py-2 rounded-xl bg-primary/[0.04] border border-primary/20 text-xs sm:text-sm font-semibold text-primary shadow-low"
         >
           <div className="flex items-center gap-2">
             <span className="size-2 rounded-full bg-primary shrink-0" />
@@ -1559,7 +1516,7 @@ export function ModularCascadingTaskTable({
                   }}
                   hasTasks={paginatedResult.items.length > 0}
                 />
-                <tbody>
+                <TableBody>
                   {groupedTasks ? (
                     groupedTasks.map((group) => {
                       const isCollapsed = isGroupCollapsed(group.key);
@@ -1686,7 +1643,7 @@ export function ModularCascadingTaskTable({
                       );
                     })
                   )}
-                </tbody>
+                </TableBody>
             </Table>
           </div>
 
@@ -1791,7 +1748,6 @@ export function ModularCascadingTaskTable({
         onPriorityChange={handleContextMenuPriorityChange}
         onDueDateChange={handleContextMenuDueDateChange}
         onAssigneeChange={onAssigneeChange}
-        onDeleteTask={handleContextMenuDelete}
       />
 
       {/* 7. Peek Preview Modal (REQ-09 / REQ-10 / REQ-23) */}

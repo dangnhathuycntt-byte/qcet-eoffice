@@ -141,7 +141,7 @@ export function PWAInstallPrompt({
         <Pressable
           onClick={handleInstall}
           disabled={isProcessing}
-          className="min-h-[44px] px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-xs sm:text-sm shadow-none transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+          className="min-h-[44px] px-5 py-2.5 rounded-xl bg-primary hover:bg-primary-hover text-primary-foreground font-semibold text-xs sm:text-sm shadow-none transition-[color,background-color,border-color,box-shadow,opacity,transform] flex items-center justify-center gap-2 disabled:opacity-50"
         >
           <Download size={16} />
           <span>{isProcessing ? "Đang xử lý..." : "Cài đặt ngay"}</span>

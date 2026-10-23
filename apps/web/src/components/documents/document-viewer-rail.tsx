@@ -724,7 +724,7 @@ export function DocumentFilesRail({
             style={{ top: cardTop }}
             className="pointer-events-none absolute right-full z-30 -translate-y-1/2 pr-1 transition-[top] duration-100 ease-out motion-reduce:transition-none"
           >
-            <div className="w-64 rounded-xl border border-border bg-popover p-3 shadow-xl">
+            <div className="w-64 rounded-xl border border-border bg-popover p-3 shadow-menu">
               <p className="line-clamp-2 break-words text-xs font-medium text-foreground">{hovered.name}</p>
               {hovered.detail ? <p className="mt-1.5 text-xs tabular-nums text-muted-foreground">{hovered.detail}</p> : null}
             </div>

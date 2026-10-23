@@ -416,11 +416,13 @@ export async function remindTask(
 export async function deleteTask(
   taskId: string,
   expectedVersion: number,
-  reason?: string
+  reason?: string,
+  options: { keepalive?: boolean } = {}
 ): Promise<TaskActionResult> {
   try {
     const res = await fetch(`/api/tasks/${taskId}/actions/archive`, {
       method: "POST",
+      keepalive: options.keepalive,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         reason: reason || "Lưu trữ nhiệm vụ từ menu thao tác",

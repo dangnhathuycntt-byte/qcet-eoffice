@@ -41,6 +41,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { revealAboveKeyboard } from "@/hooks/use-virtual-keyboard";
 import { COMMENT_REACTION_EMOJIS, joinReactionNames, reactionNamesLabel, type CommentReactionSummary } from "@qcet/shared/domain/tasks/comment-reactions";
+import { MotionUl } from "@/components/motion/motion-list";
 
 interface CommentView {
   id: string;
@@ -518,7 +519,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, initia
       )}
 
       {visibleComments.length > 0 && (
-        <ul className="max-w-3xl">
+        <MotionUl className="max-w-3xl">
           {visibleComments.map((c, index) => (
             <li key={c.id} data-notification-focus={`comment:${c.id}`} className="group/comment">
               <div className="flex min-h-5 items-center gap-2">
@@ -650,7 +651,7 @@ export function TaskComments({ taskId, canComment: canCommentProp = true, initia
               </div>
             </li>
           ))}
-        </ul>
+        </MotionUl>
       )}
 
       {status === "ready" && error && (

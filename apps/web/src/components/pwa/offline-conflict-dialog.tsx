@@ -177,14 +177,14 @@ export function OfflineConflictDialog({
     >
       <div
         className={cn(
-          "w-full max-w-xl rounded-2xl bg-white border border-border shadow-2xl overflow-hidden flex flex-col max-h-[90vh]",
+          "w-full max-w-xl rounded-2xl bg-white border border-border shadow-dialog overflow-hidden flex flex-col max-h-[90vh]",
           className
         )}
       >
         {/* Header */}
         <div className="flex items-start justify-between gap-3 p-4 sm:p-5 border-b border-border/60 bg-warning/5">
           <div className="flex items-start gap-3 min-w-0">
-            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning mt-0.5 shadow-xs">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-warning/15 text-warning mt-0.5 shadow-low">
               <AlertTriangle className="size-5" />
             </div>
             <div className="min-w-0">
@@ -360,7 +360,7 @@ export function OfflineConflictDialog({
             variant="default"
             disabled={hookData.isResolving}
             onClick={() => handleAction("override")}
-            className="min-h-[44px] px-5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-xs inline-flex items-center justify-center gap-2"
+            className="min-h-[44px] px-5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground shadow-low inline-flex items-center justify-center gap-2"
           >
             <RotateCcw className="size-4" />
             <span>Áp dụng lại (Ghi đè)</span>

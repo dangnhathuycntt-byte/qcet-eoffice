@@ -85,7 +85,7 @@ export const BottomSheetContent = React.forwardRef<
     return (
       <div
         className={cn(
-          "fixed inset-x-0 bottom-0 z-40 flex max-h-[90dvh] flex-col rounded-t-[24px] border-0 bg-card text-card-foreground shadow-dialog focus:outline-none motion-reduce:transition-none",
+          "fixed inset-x-0 bottom-0 z-40 flex max-h-[90dvh] flex-col rounded-t-2xl border-0 bg-card text-card-foreground shadow-dialog focus:outline-none motion-reduce:transition-none",
           "pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
           className
         )}
@@ -104,7 +104,7 @@ export const BottomSheetContent = React.forwardRef<
       <VaulDrawer.Content
         ref={ref}
         className={cn(
-          "fixed inset-x-0 bottom-0 z-40 flex max-h-[90dvh] flex-col rounded-t-[24px] border-0 bg-card text-card-foreground shadow-dialog focus:outline-none motion-reduce:transition-none",
+          "fixed inset-x-0 bottom-0 z-40 flex max-h-[90dvh] flex-col rounded-t-2xl border-0 bg-card text-card-foreground shadow-dialog focus:outline-none motion-reduce:transition-none",
           "pb-[max(1rem,env(safe-area-inset-bottom,0px))]",
           className
         )}

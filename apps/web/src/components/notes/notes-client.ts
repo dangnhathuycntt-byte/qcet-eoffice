@@ -64,8 +64,9 @@ export function updateNote(id: string, input: UpdatePersonalNoteInput): Promise<
   return request(`/api/notes/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(input) });
 }
 
-export async function deleteNote(id: string): Promise<void> {
-  await request(`/api/notes/${encodeURIComponent(id)}`, { method: "DELETE" });
+/** `keepalive`: lần xóa chốt lúc người dùng rời trang (hết cửa sổ Hoàn tác) vẫn phải đi sau khi trang đóng. */
+export async function deleteNote(id: string, options: { keepalive?: boolean } = {}): Promise<void> {
+  await request(`/api/notes/${encodeURIComponent(id)}`, { method: "DELETE", keepalive: options.keepalive });
 }
 
 /** Dòng danh sách từ ghi chú đầy đủ (sau khi tạo hoặc sửa) để danh sách cập nhật ngay không cần tải lại. */

@@ -6,6 +6,7 @@ import type { SelectionGroupPosition } from "@/lib/selection-group";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Pressable } from "@/components/ui/pressable";
+import { useListMotion, useMergedRefs } from "@/hooks/use-list-motion";
 
 /*
  * Bảng danh sách dùng chung, lấy nguyên từ bảng Nhiệm vụ (người dùng chọn bảng Nhiệm vụ làm mẫu cho mọi bảng 21/10/2026):
@@ -54,8 +55,13 @@ function TableHeader({ className, ...props }: React.HTMLAttributes<HTMLTableSect
   );
 }
 
-function TableBody({ className, ...props }: React.HTMLAttributes<HTMLTableSectionElement>) {
-  return <tbody data-slot="table-body" className={cn(className)} {...props} />;
+/** Chỉ `<tr>` là mục của danh sách: hàng thêm hoặc bỏ có chuyển động (`useListMotion`), xem `lib/motion/list-motion`. */
+const isTableRow = (el: HTMLElement) => el.tagName === "TR";
+
+function TableBody({ className, ref, ...props }: React.ComponentProps<"tbody">) {
+  const motionRef = useListMotion<HTMLTableSectionElement>({ item: isTableRow });
+  const mergedRef = useMergedRefs<HTMLTableSectionElement>(ref, motionRef);
+  return <tbody ref={mergedRef} data-slot="table-body" className={cn(className)} {...props} />;
 }
 
 export interface TableRowProps extends React.HTMLAttributes<HTMLTableRowElement> {
@@ -247,14 +253,14 @@ function TableRowSelector({ checked, indeterminate = false, disabled = false, on
       {filled ? (
         <span
           aria-hidden
-          className="pointer-events-none flex size-3.5 items-center justify-center rounded-[3px] bg-primary text-primary-foreground shadow-2xs transition-[opacity,transform] hover:opacity-90 active:scale-[0.98]"
+          className="pointer-events-none flex size-3.5 items-center justify-center rounded bg-primary text-primary-foreground shadow-low transition-[opacity,transform] hover:opacity-90 active:scale-[0.98]"
         >
           {checked ? <Check className="size-2.5" /> : <span className="h-0.5 w-2 rounded-full bg-primary-foreground" />}
         </span>
       ) : (
         <span
           aria-hidden
-          className="pointer-events-none size-3.5 rounded-[3px] border border-border/70 bg-background/60 opacity-60 shadow-2xs transition-[opacity,transform,border-color,background-color] duration-150 ease-out group-hover:scale-105 group-hover:border-primary group-hover:bg-primary/5 group-hover:opacity-100 group-hover/selector:opacity-100 group-hover/th:opacity-100 active:scale-[0.98]"
+          className="pointer-events-none size-3.5 rounded border border-border/70 bg-background/60 opacity-60 shadow-low transition-[opacity,transform,border-color,background-color] duration-150 ease-out group-hover:scale-105 group-hover:border-primary group-hover:bg-primary/5 group-hover:opacity-100 group-hover/selector:opacity-100 group-hover/th:opacity-100 active:scale-[0.98]"
         />
       )}
     </div>

@@ -36,6 +36,7 @@ const SHORTCUT_GROUPS: ShortcutGroup[] = [
       { label: "Bảng tra cứu phím tắt", keys: ["?"], description: "Hoặc ⌘ /" },
       { label: "Giao việc / Tạo nhiệm vụ mới", keys: ["C"] },
       { label: "Đóng cửa sổ / Hủy chọn", keys: ["Esc"] },
+      { label: "Hoàn tác thao tác vừa xóa", keys: ["⌘", "Z"], description: "Khi thông báo Hoàn tác còn hiện; Ctrl + Z trên Windows" },
     ],
   },
   {

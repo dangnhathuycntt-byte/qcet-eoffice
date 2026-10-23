@@ -19,6 +19,7 @@ import { Pressable } from "@/components/ui/pressable";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import { MotionDiv } from "@/components/motion/motion-list";
 export interface DeliverableItem {
   id: string;
   title: string;
@@ -97,7 +98,7 @@ export function TaskEvidenceSection({
         {canEdit && (
           <Pressable
             onClick={() => setIsAdding(true)}
-            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors shadow-2xs"
+            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border/80 bg-background hover:bg-muted/80 text-xs font-semibold text-foreground transition-colors shadow-low"
             title="Đính kèm minh chứng hoặc liên kết kết quả"
             aria-label="Đính kèm minh chứng hoặc liên kết kết quả"
           >
@@ -190,7 +191,7 @@ export function TaskEvidenceSection({
           )}
         </div>
       ) : (
-        <div className="divide-y divide-border/60 rounded-xl border border-border/70 bg-card overflow-hidden shadow-2xs">
+        <MotionDiv className="divide-y divide-border/60 rounded-xl border border-border/70 bg-card overflow-hidden shadow-low">
           {deliverables.map((item) => {
             const isApproved = item.status === "APPROVED";
             const isRejected = item.status === "REJECTED";
@@ -265,7 +266,7 @@ export function TaskEvidenceSection({
                         });
                         if (ok) void onDeleteDeliverable(item.id);
                       }}
-                      className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-destructive rounded transition-all focus-visible:opacity-100"
+                      className="opacity-0 group-hover/evidence:opacity-100 p-1 text-muted-foreground hover:text-destructive rounded transition-[color,background-color,border-color,box-shadow,opacity,transform] focus-visible:opacity-100"
                       title="Xóa minh chứng"
                       aria-label="Xóa minh chứng"
                     >
@@ -276,7 +277,7 @@ export function TaskEvidenceSection({
               </div>
             );
           })}
-        </div>
+        </MotionDiv>
       )}
     </section>
   );

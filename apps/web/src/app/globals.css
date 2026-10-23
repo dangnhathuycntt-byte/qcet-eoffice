@@ -622,6 +622,29 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Hiện dần khi gắn vào cây (phản hồi cho thay đổi người dùng gây ra: đổi tab, mở khung, lỗi hiện ra, nội dung thay khung chờ).
+   Chỉ opacity (compositor) nên không giật và không dịch layout. `enter-rise` thêm dịch lên 4px (cùng `listItemVariants`).
+   Fill `backwards`, không `both`: `forwards` giữ phần tử thành lớp riêng (stacking context) mãi sau khi chạy xong, làm lệch lớp
+   của tiêu đề cột dính và popover con.
+   Giảm chuyển động: `enter-rise` chỉ còn hiện dần. Không dùng cho phần tử đặt vị trí bằng JS (xem FLOATING_ENTER_CLASS). */
+@keyframes enter-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes enter-rise {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@utility enter-fade {
+  animation: enter-fade var(--motion-duration-fast) var(--motion-ease-enter) backwards;
+}
+@utility enter-rise {
+  animation: enter-rise var(--motion-duration-normal) var(--motion-ease-enter) backwards;
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: enter-fade;
+  }
+}
+
 /* Thẻ thuộc tính nổi của trang chi tiết ở màn hẹp (Cuộc họp; Nhiệm vụ có bản riêng trong task-detail-page.module.css) */
 @keyframes peek-reveal {
   from { opacity: 0; transform: translateY(-4px); }

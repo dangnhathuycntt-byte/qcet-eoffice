@@ -9,6 +9,7 @@ import { TaskStatusCircle } from "@/components/tasks/task-status-circle";
 import { PrioritySignalBars } from "@/components/tasks/priority-signal-bars";
 import { EmptyState, type IllustrationName } from "@/components/ui/empty-state";
 import { DocumentLoadError } from "@/components/documents/document-load-error";
+import { useListMotion } from "@/hooks/use-list-motion";
 import { PropertyToggleChip } from "@/components/ui/property-toggle-chip";
 import {
   ListToolbarFilterPopover,
@@ -382,7 +383,7 @@ export function DocumentLedgerToolbar({
         data-slot="list-toolbar-create"
         aria-label={primaryActionLabel}
         title={primaryActionLabel}
-        className={cn(listToolbarPrimaryButtonClass, "md:order-last max-md:order-1 max-md:-mr-1.5 max-md:size-8 max-md:rounded-full max-md:border-transparent max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
+        className={cn(listToolbarPrimaryButtonClass, "md:order-last max-md:order-1 max-md:-mr-1.5 max-md:size-8 max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
       >
         <Plus className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="max-md:sr-only">{primaryActionLabel}</span>
@@ -838,7 +839,7 @@ function LedgerSkeletonRow({ index, visibleColumns }: { index: number; visibleCo
   return (
     <div aria-hidden="true" className={cn(GRID, visibleColumns.documentNumber && "min-h-12", "max-md:min-h-12")}>
       <span className="flex items-center justify-center">
-        <Skeleton className="size-3.5 rounded-[4px]" />
+        <Skeleton className="size-3.5 rounded" />
       </span>
       <span className="flex min-w-0 flex-col gap-1.5">
         <Skeleton className={bar} style={{ width: `${45 + ((index * 17) % 40)}%` }} />
@@ -853,6 +854,9 @@ function LedgerSkeletonRow({ index, visibleColumns }: { index: number; visibleCo
     </div>
   );
 }
+
+/** Hàng văn bản là mục của danh sách (hàng tiêu đề và khung khác không): thêm hoặc bỏ có chuyển động, xem `useListMotion`. */
+const isLedgerRow = (el: HTMLElement) => el.hasAttribute("data-doc-id");
 
 export function DocumentLedgerTable({
   documents,
@@ -876,6 +880,7 @@ export function DocumentLedgerTable({
   menuDocId,
 }: DocumentLedgerTableProps) {
   const today = React.useMemo(() => todayInVietnam(), []);
+  const rowsMotionRef = useListMotion<HTMLDivElement>({ item: isLedgerRow });
   const allSelected = documents.length > 0 && documents.every((d) => selectedIds.has(d.id));
   const someSelected = selectedIds.size > 0 && !allSelected;
   const wrapperStyle = {
@@ -951,7 +956,7 @@ export function DocumentLedgerTable({
   const groupPositions = getSelectionGroupPositions(documents.map((d) => d.id), selectedIds);
 
   return (
-    <div role="table" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger px-2" style={wrapperStyle}>
+    <div ref={rowsMotionRef} role="table" aria-label="Sổ văn bản" data-slot="document-ledger-table" className="@container/ledger px-2" style={wrapperStyle}>
       {header}
       {documents.map((doc) => (
         <LedgerRow

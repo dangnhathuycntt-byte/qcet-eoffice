@@ -155,7 +155,7 @@ export const AttentionBadge = React.forwardRef<HTMLElement, AttentionBadgeProps>
         {typeof count === "number" && (
           <span
             className={cn(
-              "inline-flex items-center justify-center rounded-full font-mono font-bold bg-white/90 border border-current shadow-xs",
+              "inline-flex items-center justify-center rounded-full font-mono font-bold bg-white/90 border border-current shadow-low",
               sizeConfig.count
             )}
             aria-label={`${count} mục`}

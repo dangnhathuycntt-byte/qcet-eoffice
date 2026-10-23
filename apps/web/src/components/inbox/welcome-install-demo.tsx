@@ -66,7 +66,9 @@ export function WelcomeInstallDemo() {
       aria-hidden
       className="mt-4 flex justify-center gap-10 rounded-xl border border-border/60 bg-muted/40 px-6 py-6 select-none max-sm:gap-4 max-sm:px-3"
     >
-      <div className="shrink-0 self-center rounded-[30px] bg-background p-1.5 shadow-sm ring-1 ring-border/70 max-sm:[zoom:0.8]">
+      {/* design-lint-ignore no-arbitrary-radius: khung máy điện thoại trong hình minh họa, bo theo máy thật */}
+      <div className="shrink-0 self-center rounded-[30px] bg-background p-1.5 shadow-low ring-1 ring-border/70 max-sm:[zoom:0.8]">
+        {/* design-lint-ignore no-arbitrary-radius: màn hình điện thoại trong hình minh họa */}
         <div className="relative h-[360px] w-[180px] overflow-hidden rounded-[24px] bg-background text-xs">
           {/* Safari đang mở QCET E-Office */}
           <StatusBar />
@@ -79,7 +81,7 @@ export function WelcomeInstallDemo() {
             <span className="mt-5 block h-7 rounded-md bg-primary/80" />
           </div>
           <div className="absolute inset-x-0 bottom-0 bg-muted/60 pb-1 pt-1.5">
-            <div className="mx-3 flex h-7 items-center justify-center gap-1 rounded-lg bg-background text-muted-foreground shadow-xs">
+            <div className="mx-3 flex h-7 items-center justify-center gap-1 rounded-lg bg-background text-muted-foreground shadow-low">
               <Lock className="size-3" />
               <span className="h-1.5 w-16 rounded-full bg-foreground/15" />
             </div>
@@ -122,19 +124,19 @@ export function WelcomeInstallDemo() {
             {HOME_CELLS.map(([col, row]) => (
               <span
                 key={`${col}-${row}`}
-                className="absolute size-9 rounded-[10px] bg-foreground/10"
+                className="absolute size-9 rounded-sm bg-foreground/10"
                 style={{ left: cellX(col), top: cellY(row) }}
               />
             ))}
             <img
               src={APP_ICON}
               alt=""
-              className={cn("absolute size-9 rounded-[10px] shadow-sm", STILL)}
+              className={cn("absolute size-9 rounded-sm shadow-low", STILL)}
               style={{ left: cellX(2), top: cellY(1), ...anim("welcome-phone-icon") }}
             />
             <div className="absolute inset-x-2 bottom-2 flex h-12 items-center justify-around rounded-2xl bg-foreground/[0.06] px-1">
               {[0, 1, 2, 3].map((index) => (
-                <span key={index} className="size-9 rounded-[10px] bg-foreground/10" />
+                <span key={index} className="size-9 rounded-sm bg-foreground/10" />
               ))}
             </div>
           </div>

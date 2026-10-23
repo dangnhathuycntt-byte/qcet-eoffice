@@ -942,7 +942,7 @@ export function TaskDetailSideSheet({
           animate="animate"
           exit="exit"
           className={cn(
-            "fixed inset-0 md:inset-y-0 md:right-0 md:left-auto z-50 flex h-full flex-col border-l border-border/50 bg-card shadow-2xl !m-0",
+            "fixed inset-0 md:inset-y-0 md:right-0 md:left-auto z-50 flex h-full flex-col border-l border-border/50 bg-card shadow-sheet !m-0",
             // Mobile (< 768px): Full-screen detail surface
             "w-full max-w-none rounded-none",
             // Tablet & Desktop (768-1439px): 520px side sheet overlay
@@ -956,7 +956,7 @@ export function TaskDetailSideSheet({
           aria-labelledby="task-detail-title"
         >
         {/* Sticky Header Bar: Task Code, Compact Status, Mobile Back & Close */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-card/90 backdrop-blur-xl gap-2">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border/50 px-4 sm:px-6 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] bg-card gap-2">
           {/* Mobile Back Button (< 768px) */}
           <Pressable
             onClick={onClose}
@@ -1040,7 +1040,7 @@ export function TaskDetailSideSheet({
             <div className="flex items-center gap-2 mb-2">
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md border text-xs font-semibold px-2 py-0.5 shadow-2xs",
+                  "inline-flex items-center gap-1.5 rounded-md border text-xs font-semibold px-2 py-0.5 shadow-low",
                   levelBadge.className
                 )}
               >
@@ -1113,7 +1113,7 @@ export function TaskDetailSideSheet({
           {/* Owner / Unit metadata grid (T16: owner & unit before evidence) */}
           <div
             data-slot="detail-owner-unit"
-            className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-border/50 bg-card/60 shadow-xs text-xs"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-xl border border-border/50 bg-card/60 shadow-low text-xs"
           >
             {/* Cell 1: Lead / Assignee */}
             <div className="flex flex-col gap-1">
@@ -1237,7 +1237,7 @@ export function TaskDetailSideSheet({
 
               {/* List of existing deliverables */}
               {((task as StaffTask).deliverables?.length || 0) > 0 ? (
-                <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
+                <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-low">
                   {(task as StaffTask).deliverables!.map((item) => (
                     <div
                       key={item.id}
@@ -1283,7 +1283,7 @@ export function TaskDetailSideSheet({
                   id="deliverable-form"
                   tabIndex={-1}
                   onSubmit={handleSubmitDeliverable}
-                  className="rounded-xl border border-border/60 bg-card p-4 space-y-3 shadow-xs"
+                  className="rounded-xl border border-border/60 bg-card p-4 space-y-3 shadow-low"
                 >
                   <div className="space-y-1">
                     <h4 className="text-xs font-bold text-foreground flex items-center gap-1.5">
@@ -1501,7 +1501,7 @@ export function TaskDetailSideSheet({
               {task.status === "NEW" && onStatusChange && (actorIsAssignee || actorHasApprovalAuthority) && (
                 <Button
                   onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                  className="flex-1 h-8.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
+                  className="flex-1 h-8.5 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg shadow-low gap-1.5 active:scale-[0.98] transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                 >
                   <Play className="size-3.5" />
                   <span>Tiếp nhận công việc</span>
@@ -1520,7 +1520,7 @@ export function TaskDetailSideSheet({
                           const nameInput = document.getElementById("deliverable-name");
                           nameInput?.focus();
                         }}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow-low gap-1.5 active:scale-[0.98] transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                       >
                         <FileCheck className="size-3.5" />
                         <span>Nộp minh chứng nghiệm thu</span>
@@ -1528,7 +1528,7 @@ export function TaskDetailSideSheet({
                     ) : (
                       <Button
                         onClick={() => onStatusChange?.(task.id, "COMPLETED")}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-low gap-1.5 active:scale-[0.98] transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                       >
                         <CheckCircle2 className="size-3.5" />
                         <span>Hoàn thành nhiệm vụ</span>
@@ -1542,7 +1542,7 @@ export function TaskDetailSideSheet({
                   ) : actorHasApprovalAuthority && onStatusChange ? (
                     <Button
                       onClick={() => onStatusChange(task.id, "COMPLETED")}
-                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
+                      className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-low gap-1.5 active:scale-[0.98] transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                     >
                       <CheckCircle2 className="size-3.5" />
                       <span>Nghiệm thu hoàn thành</span>
@@ -1558,7 +1558,7 @@ export function TaskDetailSideSheet({
                     {aiReview?.suggestedAction === "QUICK_APPROVE" ? (
                       <Button
                         onClick={handleManagerApprove}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-low gap-1.5 active:scale-[0.98] transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                       >
                         <CheckCircle2 className="size-3.5" />
                         <span>Duyệt nhanh (Đạt chuẩn)</span>
@@ -1566,7 +1566,7 @@ export function TaskDetailSideSheet({
                     ) : (
                       <Button
                         onClick={handleManagerApprove}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-low gap-1.5 active:scale-[0.98] transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                       >
                         <CheckCircle2 className="size-3.5" />
                         <span>Nghiệm thu Đạt (Hoàn thành)</span>
@@ -1576,7 +1576,7 @@ export function TaskDetailSideSheet({
                       <Button
                         variant="outline"
                         onClick={() => setIsRejectionModalOpen(true)}
-                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] inline-flex items-center gap-1.5"
+                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 active:scale-[0.98] inline-flex items-center gap-1.5"
                       >
                         <RotateCcw className="size-3.5" />
                         <span>Trả lại Yêu cầu Sửa</span>
@@ -1649,7 +1649,7 @@ export function TaskDetailSideSheet({
                 HIGH_RISK: "Rủi ro cao",
               };
               return (
-                <div className="rounded-xl border border-border/50 bg-card p-4 text-xs space-y-3 shadow-xs" data-testid="ai-executive-brief">
+                <div className="rounded-xl border border-border/50 bg-card p-4 text-xs space-y-3 shadow-low" data-testid="ai-executive-brief">
                   <div className="flex items-center justify-between">
                     <h4 className="font-semibold text-foreground flex items-center gap-1.5">
                       <ShieldCheck className="size-4 text-primary" />
@@ -1723,7 +1723,7 @@ export function TaskDetailSideSheet({
                     {aiReview.suggestedAction === "QUICK_APPROVE" && (
                       <Button
                         onClick={handleManagerApprove}
-                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all duration-150"
+                        className="flex-1 h-8.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-low gap-1.5 active:scale-[0.98] transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150"
                       >
                         <CheckCircle2 className="size-3.5" />
                         <span>Duyệt nhanh theo đề xuất AI</span>
@@ -1738,7 +1738,7 @@ export function TaskDetailSideSheet({
                           }
                           setIsRejectionModalOpen(true);
                         }}
-                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-all duration-150 active:scale-[0.98] inline-flex items-center gap-1.5"
+                        className="h-8.5 px-3 text-xs font-medium border-warning/30 bg-warning/10 text-warning hover:bg-warning/20 rounded-lg transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 active:scale-[0.98] inline-flex items-center gap-1.5"
                       >
                         <AlertTriangle className="size-3.5" />
                         <span>Yêu cầu chỉnh sửa</span>
@@ -1792,7 +1792,7 @@ export function TaskDetailSideSheet({
                 {canCloseSchool ? (
                   <Button
                     onClick={handleExecutiveClose}
-                    className="w-full h-8.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-xs gap-1.5 active:scale-[0.98] transition-all"
+                    className="w-full h-8.5 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-low gap-1.5 active:scale-[0.98] transition-[color,background-color,border-color,box-shadow,opacity,transform]"
                   >
                     <CheckCircle2 className="size-3.5" />
                     <span>Đóng Nhiệm vụ cấp Trường</span>
@@ -1846,7 +1846,7 @@ export function TaskDetailSideSheet({
               </div>
 
               {/* Subtask Clean List */}
-              <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-xs">
+              <div className="divide-y divide-border/40 rounded-xl border border-border/50 bg-card overflow-hidden shadow-low">
                 {schoolTask.subTasks.length === 0 ? (
                   <div className="py-6 flex flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground">
                     <ListTodo className="size-5 text-muted-foreground/50" />
@@ -2057,7 +2057,7 @@ export function TaskDetailSideSheet({
         </div>
 
         {/* Mobile Contextual Sticky Bottom Action Bar (< 768px) */}
-        <div className="md:hidden sticky bottom-0 z-20 border-t border-border/60 bg-card/95 backdrop-blur-xl px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-lg space-y-2">
+        <div className="md:hidden sticky bottom-0 z-20 border-t border-border/60 bg-card px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-menu space-y-2">
           <div className="flex items-center gap-2">
             {/* Condition 1: Manager / BGH Review Mode */}
             {(canReview && task.status === "NEEDS_REVIEW") ||
@@ -2073,7 +2073,7 @@ export function TaskDetailSideSheet({
                 </Button>
                 <Button
                   onClick={isSchool ? handleExecutiveClose : handleManagerApprove}
-                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-xs inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
+                  className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-low inline-flex items-center justify-center gap-1.5 touch-manipulation active:scale-[0.98]"
                 >
                   <CheckCircle2 className="size-4" />
                   <span>Phê duyệt</span>
@@ -2089,7 +2089,7 @@ export function TaskDetailSideSheet({
                     document.getElementById("deliverable-name")?.focus();
                   }
                 }}
-                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-low inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
                 <FileCheck className="size-4" />
                 <span>Nộp báo cáo</span>
@@ -2098,7 +2098,7 @@ export function TaskDetailSideSheet({
               /* Condition 3: accept the new assignment (canonical lifecycle start) */
               <Button
                 onClick={() => onStatusChange(task.id, "IN_PROGRESS")}
-                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-low inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
                 <Play className="size-4" />
                 <span>Tiếp nhận công việc</span>
@@ -2111,7 +2111,7 @@ export function TaskDetailSideSheet({
                     .getElementById("task-detail-context-actions")
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
                 }}
-                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-xs inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
+                className="flex-1 min-h-[44px] h-11 text-xs font-semibold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-low inline-flex items-center justify-center gap-2 touch-manipulation active:scale-[0.98]"
               >
                 <Play className="size-4" />
                 <span>Xem thao tác xử lý</span>
@@ -2137,7 +2137,7 @@ export function TaskDetailSideSheet({
                     onClick={() => setIsMobileMenuOpen(false)}
                     aria-hidden="true"
                   />
-                  <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border border-border/70 bg-card p-1.5 shadow-xl z-40 space-y-0.5 animate-in fade-in slide-in-from-bottom-2 duration-150 text-xs">
+                  <div className="absolute right-0 bottom-full mb-2 w-52 rounded-xl border border-border/70 bg-card p-1.5 shadow-menu z-40 space-y-0.5 animate-in fade-in slide-in-from-bottom-2 duration-150 text-xs">
                     <Pressable
                       onClick={() => {
                         const code = isSchool ? (task as SchoolTask).taskCode : (task as StaffTask).code;
@@ -2195,7 +2195,7 @@ export function TaskDetailSideSheet({
               className="absolute inset-0 z-30 flex items-center justify-center bg-background/80 backdrop-blur-xs p-4 sm:p-6 !m-0"
               data-slot="in-sheet-rejection-panel"
             >
-              <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-xl space-y-4">
+              <div className="w-full max-w-md rounded-xl border border-border/60 bg-card p-5 shadow-dialog space-y-4">
                 <div className="flex items-center justify-between border-b border-border/50 pb-3">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="size-4 text-warning" />

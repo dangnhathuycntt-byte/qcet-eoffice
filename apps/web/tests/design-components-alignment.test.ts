@@ -17,7 +17,10 @@ describe("Design Components & Foundation Alignment Suite", () => {
       assert.ok(source.includes("top-[10%]"), "Dialog popup must align top-[10%]");
       assert.ok(source.includes("-translate-x-1/2"), "Dialog popup must center horizontally with -translate-x-1/2");
       assert.ok(source.includes("max-h-[85dvh]"), "Dialog popup max height must be 85dvh");
-      assert.ok(source.includes("bg-black/40"), "Dialog backdrop must use 40% black overlay");
+      // Nền phủ là token `bg-overlay` (đen 25% như Linear, đo 22/10/2026); trước đây test này khớp chữ "bg-black/40" trong chú thích
+      assert.match(source, /BaseDialog\.Backdrop[^>]*className="[^"]*\bbg-overlay\b/, "Dialog backdrop must use the bg-overlay token");
+      const css = fs.readFileSync(path.resolve(__dirname, "../src/app/globals.css"), "utf-8");
+      assert.match(css, /--overlay:\s*rgba\(0,\s*0,\s*0,\s*0\.25\)/, "Overlay token is 25% black (Linear)");
     });
 
     it("supports design-specified modal sizes (sm: 400px, md: 560px, lg: 720px)", () => {

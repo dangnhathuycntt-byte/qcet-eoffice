@@ -138,6 +138,47 @@ const DESIGN_RULES = [
     test: (line) => /(?<![\w-])text-\[\d+(?:\.\d+)?(?:px|rem)\]/.test(line),
   },
   {
+    id: "no-raw-shadow",
+    message:
+      "Tailwind default shadow. Elevation has four tokens (Linear's three levels plus the edge sheet): shadow-low (button, chip, page frame, tooltip) · shadow-menu (popover, menu, floating bar) · shadow-sheet (panel sliding from an edge) · shadow-dialog (dialog, large overlay).",
+    test: (line) => /(?<![\w/-])(?:[a-z0-9-]+:)*shadow(?:-(?:2xs|xs|sm|md|lg|xl|2xl))?(?![\w/[:-])/.test(line),
+  },
+  {
+    id: "no-arbitrary-shadow",
+    message:
+      "Hand-drawn shadow. Use shadow-low / shadow-menu / shadow-sheet / shadow-dialog; a new elevation level belongs in globals.css and DESIGN.md first.",
+    appliesTo: (relPath) => !relPath.startsWith("apps/web/src/components/ui/"),
+    test: (line) => /(?<![\w-])shadow-\[(?!var\(--shadow-)/.test(line),
+  },
+  {
+    id: "no-dynamic-variant-class",
+    message:
+      "Tailwind class built at runtime (`[&_span]:${x}`, `hover:${x}`): Tailwind only generates classes it finds whole in source, so this one never exists. Write every full class literally and pick between them.",
+    test: (line) =>
+      /\]:\$\{|(?<![\w-])(?:hover|focus(?:-visible|-within)?|active|disabled|group-[a-z-]+|peer-[a-z-]+|(?:max-)?(?:sm|md|lg|xl|2xl)|data-[a-z-]+|aria-[a-z-]+):\$\{/.test(line),
+  },
+  {
+    id: "hover-only-reveal",
+    message:
+      "Control shown only on hover. Hover is a weak signal: also reveal it on keyboard focus (group-focus-within:opacity-100) and on touch screens ([@media(hover:none)]:opacity-100), like TableRowActions. Purely decorative icons take aria-hidden.",
+    test: (line) =>
+      /\bopacity-0\b/.test(line) &&
+      /group-hover(?:\/[\w-]+)?:opacity-100/.test(line) &&
+      !/focus-within|focus-visible|aria-hidden/.test(line),
+  },
+  {
+    id: "no-transition-all",
+    message:
+      "transition-all animates every property, layout ones included (width, height, padding), so one class change on a big surface repaints each frame and menus slide in from (0,0). Name the properties: transition-colors, transition-opacity, transition-transform or transition-[color,background-color,border-color,box-shadow,opacity,transform].",
+    test: (line) => /(?<![\w-])transition-all(?![\w-])/.test(line),
+  },
+  {
+    id: "no-arbitrary-radius",
+    message:
+      "Off-scale radius. Use rounded (4px: keycap, 14px checkbox) · rounded-sm 8 · rounded-md 12 · rounded-lg 14 · rounded-xl 16 · rounded-full. Nested like Linear: a card inside a 12px frame is 8px.",
+    test: (line) => /(?<![\w-])rounded(?:-[a-z]{1,2})?-\[\d+(?:\.\d+)?(?:px|rem)\]/.test(line),
+  },
+  {
     id: "no-raw-control",
     message:
       "Raw form control. Use Button / Input / Textarea / Select / Checkbox from @/components/ui (they carry size, focus ring and touch target); a custom hit area (row, cell, card, tab) is Pressable. If neither fits, add `design-lint-ignore no-raw-control: <reason>`.",

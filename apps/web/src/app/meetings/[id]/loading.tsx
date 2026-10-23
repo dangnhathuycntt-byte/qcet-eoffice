@@ -21,11 +21,11 @@ export default function MeetingDetailLoading() {
               <Skeleton className="mt-3 h-3 w-32" />
               <Skeleton className="h-3.5 w-full" />
               <Skeleton className="h-3.5 w-4/5" />
-              <Skeleton className="mt-4 h-40 w-full rounded-[10px]" />
+              <Skeleton className="mt-4 h-40 w-full rounded-sm" />
             </div>
             <div className="flex flex-col gap-2 px-2 max-lg:hidden">
-              <Skeleton className="h-48 w-full rounded-[10px]" />
-              <Skeleton className="h-28 w-full rounded-[10px]" />
+              <Skeleton className="h-48 w-full rounded-sm" />
+              <Skeleton className="h-28 w-full rounded-sm" />
             </div>
           </div>
         </div>

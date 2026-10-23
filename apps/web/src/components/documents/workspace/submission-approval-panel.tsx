@@ -168,7 +168,7 @@ export function SubmissionApprovalPanel({
     <span
       aria-hidden
       className={cn(
-        "flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border transition-colors",
+        "flex size-3.5 shrink-0 items-center justify-center rounded border transition-colors",
         checked
           ? muted
             ? "border-transparent bg-muted-foreground/30 text-background"

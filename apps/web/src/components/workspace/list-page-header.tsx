@@ -30,7 +30,7 @@ export function ListPageTitle({ className, ...props }: React.HTMLAttributes<HTML
   return <h1 className={cn("text-compact font-medium text-foreground select-none", className)} {...props} />;
 }
 
-/** Nút tạo mới ở góc phải `ListPageHeader` ("+ Tạo việc"): nền trong, bo tròn; điện thoại chỉ còn dấu + (vùng bấm 32px). */
+/** Nút tạo mới ở góc phải `ListPageHeader` ("+ Tạo việc"): nút phụ viên thuốc như "New issue" của Linear; điện thoại chỉ còn dấu + trơn (vùng bấm 32px). */
 export function ListPageCreateButton({
   label,
   ariaLabel = label,
@@ -47,7 +47,7 @@ export function ListPageCreateButton({
       onClick={onClick}
       title={ariaLabel}
       aria-label={ariaLabel}
-      className={cn(listToolbarPrimaryButtonClass, "rounded-full border-transparent bg-transparent shadow-none max-md:size-8 max-md:px-0")}
+      className={cn(listToolbarPrimaryButtonClass, "max-md:size-8 max-md:bg-transparent max-md:px-0 max-md:shadow-none")}
     >
       <Plus className="size-3.5 shrink-0 text-muted-foreground" />
       <span className="hidden md:inline">{label}</span>

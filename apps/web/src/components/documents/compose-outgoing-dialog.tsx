@@ -15,6 +15,7 @@ import { useModifierKey } from "@/hooks/use-modifier-key";
 import type { DocumentSecurityLevel, DocumentUrgency } from "@qcet/contracts/types/document";
 import { FileTypeIcon } from "./file-type-icon";
 import { attachFileToDocument } from "./workspace/document-edit";
+import { MotionUl } from "@/components/motion/motion-list";
 
 /**
  * Hình thức văn bản theo danh mục của VNPT iOffice (modal "Thông tin văn bản đi", xem 15/10/2026):
@@ -300,7 +301,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
 
             {/* Tệp dự thảo: bắt buộc, nhiều tệp, tải lên sau khi bản nháp được tạo; nằm dưới ghi chú như tệp đính kèm của Linear */}
             {files.length > 0 ? (
-              <ul aria-label="Tệp dự thảo" className="mt-3 flex shrink-0 flex-col">
+              <MotionUl aria-label="Tệp dự thảo" className="mt-3 flex shrink-0 flex-col">
                 {files.map((file) => (
                   <li key={`${file.name}-${file.size}`} className="group flex h-8 min-w-0 items-center gap-2">
                     <FileTypeIcon fileName={file.name} mimeType={file.type} className="size-4" />
@@ -320,7 +321,7 @@ export function ComposeOutgoingDialog({ open, onClose, onCreated }: ComposeOutgo
                     ) : null}
                   </li>
                 ))}
-              </ul>
+              </MotionUl>
             ) : null}
           </DialogComposeBody>
 

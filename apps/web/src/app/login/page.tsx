@@ -17,9 +17,11 @@ import { Pressable } from "@/components/ui/pressable";
 
 /* ─── Layout constants ─── */
 const PAGE = "flex min-h-[100dvh] w-full items-start justify-center bg-white px-6 pt-24 pb-10 outline-none min-[600px]:items-center min-[600px]:py-10 relative overflow-hidden font-sans text-foreground";
+// design-lint-ignore no-arbitrary-radius: trang đăng nhập công khai giữ bố cục riêng (như cỡ chữ 15/28px trong baseline); design-lint-ignore no-arbitrary-shadow: thẻ đăng nhập không nằm trong khung app
 const CARD = "flex w-full max-w-[420px] flex-col items-center rounded-none px-0 pb-8 text-center min-[600px]:rounded-[24px] min-[600px]:px-10 min-[600px]:pt-11 min-[600px]:pb-8 min-[600px]:shadow-[0_0_0_1px_var(--border),0_16px_48px_rgba(26,29,35,0.08)] bg-white relative z-10";
-const BTN_PRIMARY = "flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] bg-[var(--google-btn-bg)] shadow-[inset_0_0_0_1px_var(--google-btn-edge)] px-4 text-sm font-medium text-[var(--google-btn-text)] hover:bg-[var(--google-btn-bg-hover)] active:bg-[var(--google-btn-bg-active)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-[3px] disabled:opacity-70 disabled:cursor-not-allowed";
-const BTN_OUTLINE = "flex h-12 w-full items-center justify-center gap-2.5 rounded-[14px] border border-border bg-white px-4 text-sm font-medium text-foreground hover:bg-background active:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-[3px] disabled:opacity-70 disabled:cursor-not-allowed";
+// design-lint-ignore no-arbitrary-shadow: viền trong của nút Google theo màu thương hiệu (--google-btn-edge)
+const BTN_PRIMARY = "flex h-12 w-full items-center justify-center gap-2.5 rounded-lg bg-[var(--google-btn-bg)] shadow-[inset_0_0_0_1px_var(--google-btn-edge)] px-4 text-sm font-medium text-[var(--google-btn-text)] hover:bg-[var(--google-btn-bg-hover)] active:bg-[var(--google-btn-bg-active)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-[3px] disabled:opacity-70 disabled:cursor-not-allowed";
+const BTN_OUTLINE = "flex h-12 w-full items-center justify-center gap-2.5 rounded-lg border border-border bg-white px-4 text-sm font-medium text-foreground hover:bg-background active:bg-muted transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-[3px] disabled:opacity-70 disabled:cursor-not-allowed";
 
 const C = { fg: "#1A1D23", sub: "#5F6671", err: "#B91C1C", border: "#EAEDF1" } as const;
 
@@ -43,7 +45,7 @@ function LoginSkeleton() {
         <div className="size-14 min-[600px]:size-16 rounded-full bg-muted" />
         <div className="mt-[22px] h-8 w-40 rounded bg-muted" />
         <div className="mt-1.5 h-5 w-56 rounded bg-muted" />
-        <div className="mt-7 h-12 w-full rounded-[14px] bg-muted" />
+        <div className="mt-7 h-12 w-full rounded-lg bg-muted" />
         <div className="mt-3.5 h-4 w-32 rounded bg-muted" />
         <div className="mt-2 h-4 w-52 rounded bg-muted" />
       </div>
@@ -406,7 +408,7 @@ function LoginFormContent() {
                     setIsQuickLogging(true);
                     signIn("google", { callbackUrl: targetUrl }, { login_hint: acc.email }).catch(() => setIsQuickLogging(false));
                   }}
-                  className="flex w-full items-center gap-3 rounded-2xl bg-muted p-3 text-left transition-all duration-150 active:scale-[0.98] hover:bg-bg-hover"
+                  className="flex w-full items-center gap-3 rounded-2xl bg-muted p-3 text-left transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 active:scale-[0.98] hover:bg-bg-hover"
                 >
                   {acc.avatar ? (
                     <img src={acc.avatar} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />
@@ -463,7 +465,7 @@ function LoginFormContent() {
           <Pressable
             disabled={isQuickLogging}
             onClick={handleQuickLogin}
-            className="group mt-6 flex w-full items-center gap-3 rounded-2xl border border-border bg-white p-3 text-left shadow-[0_1px_2px_rgba(16,24,40,0.05)] transition-all duration-150 active:scale-[0.98] hover:border-[var(--gray-7)] hover:shadow-[0_2px_8px_rgba(16,24,40,0.08)] disabled:cursor-default"
+            className="group mt-6 flex w-full items-center gap-3 rounded-2xl border border-border bg-white p-3 text-left shadow-low transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-150 active:scale-[0.98] hover:border-[var(--gray-7)] hover:shadow-menu disabled:cursor-default"
           >
             {lastUser.avatar ? (
               <img src={lastUser.avatar} alt="" width={40} height={40} className="size-10 shrink-0 rounded-full object-cover" referrerPolicy="no-referrer" />

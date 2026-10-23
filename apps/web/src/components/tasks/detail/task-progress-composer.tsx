@@ -99,7 +99,7 @@ export function TaskProgressComposer({
     <div
       data-slot="task-progress-composer"
       className={cn(
-        "rounded-xl border border-border/50 bg-card/40 p-4 space-y-2.5 transition-all select-none cursor-default",
+        "rounded-xl border border-border/50 bg-card/40 p-4 space-y-2.5 transition-colors select-none cursor-default",
         className
       )}
     >
@@ -260,7 +260,7 @@ export function TaskProgressComposer({
               <Pressable
                 type="submit"
                 disabled={isSubmitting}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-md bg-primary text-primary-foreground text-xs font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 shadow-low"
               >
                 {isSubmitting ? (
                   <>

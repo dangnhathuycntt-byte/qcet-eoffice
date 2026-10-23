@@ -28,6 +28,7 @@ import {
 import { Pressable } from "@/components/ui/pressable";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { MotionDiv } from "@/components/motion/motion-list";
 
 export interface ActiveFilterSummaryParams {
   dept?: string;
@@ -607,6 +608,7 @@ export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCoun
       data-slot={dataSlot}
       data-filter-bar=""
       className={cn(
+        "enter-fade",
         inline
           ? "flex min-w-0 flex-1 flex-nowrap items-center justify-between gap-2 text-xs"
           : "flex min-h-8 flex-wrap items-center gap-1.5 text-xs",
@@ -615,7 +617,7 @@ export function ActiveFilterBar({ children, onClearAll, filteredCount, totalCoun
     >
       {/* Hàng thường: chip và cụm bên phải cùng xuống dòng như chữ, chip không bị cắt (390px trước đây cắt "Chờ duy…"),
           cụm "Xóa lọc" đứng cạnh chip cuối khi còn chỗ */}
-      <div className={inline ? "flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto thin-scrollbar" : "contents"}>{children}</div>
+      <MotionDiv className={inline ? "flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-x-auto thin-scrollbar" : "contents"}>{children}</MotionDiv>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {onClearAll && (

@@ -3,7 +3,6 @@
 import * as React from "react";
 import { Select } from "@base-ui/react/select";
 import { Combobox } from "@base-ui/react/combobox";
-import { X } from "lucide-react";
 import {
   TaskIconAssignee,
   TaskIconDeadline,
@@ -76,7 +75,6 @@ export function TaskStatusSelect({ value, options, disabled, onValueChange }: {
 
 export type { PersonnelOption as TaskPersonnelOption } from "@/hooks/use-personnel-list";
 import type { PersonnelOption } from "@/hooks/use-personnel-list";
-import { Pressable } from "@/components/ui/pressable";
 import { MENU_POPUP_FIT_CLASS, MenuSheetHeader, SheetKeyboardSync, SHEET_BACKDROP_CLASS, SHEET_POPUP_CLASS, SHEET_POSITIONER_CLASS } from "@/components/ui/menu";
 
 import { Spinner } from "@/components/ui/spinner";
@@ -157,27 +155,27 @@ export function TaskDateRange({
   canEdit,
   onStartDateChange,
   onDueDateChange,
-  onClearDates,
 }: {
   startDateIso: string;
   dueDateIso: string;
   canEdit?: boolean;
   onStartDateChange?: (iso: string) => void;
   onDueDateChange?: (iso: string) => void;
-  onClearDates?: () => void;
 }) {
   const dueInfo = computeDueStatus(dueDateIso || undefined);
   const nearDue = !dueInfo.isOverdue && dueDateIso && (
     dueInfo.text === "Hôm nay" || dueInfo.text === "Ngày mai" || dueInfo.text === "Còn 2 ngày"
   );
   const urgencyClass = dueInfo.isOverdue ? "text-destructive" : nearDue ? "text-warning" : "";
+  // Viết nguyên class để Tailwind quét thấy: ghép `[&_span]:${…}` lúc chạy thì class không được sinh, ngày trễ hạn mất màu
+  const urgencySpanClass = dueInfo.isOverdue ? "[&_span]:text-destructive" : nearDue ? "[&_span]:text-warning" : "";
   const iconClass = dueInfo.isOverdue ? "text-destructive" : nearDue ? "text-warning" : "text-muted-foreground";
 
   const startLabel = startDateIso ? formatDisplayDate(startDateIso) : "-";
   const dueLabel = dueDateIso ? formatDisplayDate(dueDateIso) : "Chưa đặt hạn";
 
   return (
-    <div className="relative group/date-row inline-flex items-center gap-1">
+    <div className="relative inline-flex items-center gap-1">
       <TaskIconDeadline className={cn("size-4 shrink-0", iconClass)} />
       {canEdit && onStartDateChange ? (
         <VietnameseDatePicker
@@ -188,7 +186,7 @@ export function TaskDateRange({
           icon={null}
           side="bottom"
           align="left"
-          className={cn("p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent", urgencyClass && `[&_span]:${urgencyClass}`)}
+          className={cn("p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent", urgencySpanClass)}
         />
       ) : (
         <span className={cn("tabular-nums text-xs font-normal", urgencyClass || "text-muted-foreground")}>{startLabel}</span>
@@ -204,20 +202,10 @@ export function TaskDateRange({
           side="bottom"
           align="left"
           showPresets={true}
-          className={cn("p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent", urgencyClass && `[&_span]:${urgencyClass}`)}
+          className={cn("p-0 h-auto border-0 text-xs font-normal shadow-none hover:bg-transparent", urgencySpanClass)}
         />
       ) : (
         <span className={cn("tabular-nums text-xs font-normal", urgencyClass || "text-muted-foreground")}>{dueLabel}</span>
-      )}
-      {canEdit && onClearDates && (startDateIso || dueDateIso) && (
-        <Pressable
-          onClick={(e) => { e.stopPropagation(); onClearDates(); }}
-          className="opacity-0 group-hover/date-row:opacity-100 inline-flex size-4 items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-all motion-reduce:transition-none"
-          aria-label="Xóa ngày"
-          title="Xóa ngày"
-        >
-          <X className="size-3" />
-        </Pressable>
       )}
     </div>
   );
