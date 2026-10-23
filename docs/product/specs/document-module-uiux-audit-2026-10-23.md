@@ -1,6 +1,6 @@
 # Văn bản: rà soát UI/UX theo từng thành phần và luồng người dùng
 
-Ngày: 2026-10-23. Trạng thái: **đề xuất, chưa duyệt**. Tài liệu này không cho phép tự triển khai; mọi mục “Đề xuất” cần người dùng đồng ý trước khi sửa code.
+Ngày: 2026-10-23. Trạng thái: **đã duyệt ngày 2026-10-23** (người dùng: “duyệt và tự quyết”); các quyết định D1–D9 do tác giả chọn ở §11 theo lời giao đó. Triển khai theo từng đợt ở §9; tiến độ ghi ở §9.1. Mục nào không nằm trong đợt đã làm vẫn là đề xuất.
 
 Phạm vi: toàn bộ module Văn bản — Sổ văn bản (bảng, bộ lọc, hàng loạt, thẻ điện thoại), Quick View và trình xem tệp, hộp Soạn văn bản đi, luồng văn bản đi (trình → duyệt nội dung → thể thức → ký → cấp số → đóng dấu → phát hành → tiếp nhận → thu hồi), Tờ trình nội bộ, Hồ sơ công việc, Báo cáo duyệt, thông báo liên quan. Không đụng sidebar chung, quy trình Nhiệm vụ, hay quyết định ADR-015 (QCET chỉ soạn văn bản đi; văn bản đến phát sinh từ phát hành).
 
@@ -18,7 +18,7 @@ Năm nhóm vấn đề, xếp theo mức nghiêm trọng:
 | D. Luồng không khép | Tiếp nhận là ngõ cụt (ADR-015 để sau); tờ trình duyệt xong dừng ở nhãn “Đã lập hồ sơ” không có hồ sơ; Hồ sơ công việc không tạo được, không thêm được tài liệu, “Đóng hồ sơ” luôn lỗi; người duyệt tờ trình không mở được tệp | R1, T1–T3, H1–H3 |
 | E. Chữ ký số là giả | `signature_records` ghi `VALID` + “Ban Cơ yếu Chính phủ” gán cứng, hộp ký chỉ có [Hủy][Xác nhận]; người dùng tin đã ký số | G1 |
 
-Hướng sửa (chi tiết ở §8–§9): **khép luồng văn bản đi trước, thêm tính năng sau**. Đợt A (P0) làm cho người duyệt thấy, được báo, bấm được đúng nút và người soạn biết bị trả vì sao; đợt B làm trạng thái và bước nhận trung thực; đợt C là tinh chỉnh. Phụ thuộc quyết định của chủ sở hữu ở §11 (chữ ký số, ký hiệu số, nộp lưu, vai trò nơi nhận) được giữ nguyên là *chưa quyết*, không tự giải.
+Hướng sửa (chi tiết ở §8–§9): **khép luồng văn bản đi trước, thêm tính năng sau**. Đợt A (P0) làm cho người duyệt thấy, được báo, bấm được đúng nút và người soạn biết bị trả vì sao; đợt B làm trạng thái và bước nhận trung thực; đợt C là tinh chỉnh. Các quyết định chủ sở hữu ở §11 (chữ ký số, ký hiệu số, nộp lưu, vai trò nơi nhận) đã được chọn ngày 2026-10-23 theo lời giao “duyệt và tự quyết”; mỗi lựa chọn đảo lại được.
 
 ## 2. Phương pháp và độ tin cậy
 
@@ -32,7 +32,7 @@ Hướng sửa (chi tiết ở §8–§9): **khép luồng văn bản đi trư�
 
 Hai sub-agent chỉ đọc mã đã lập bảng trạng thái ↔ sự kiện ↔ hàng đợi thông báo và bảng route API ↔ điều khiển giao diện (64 file route = 74 cặp method + đường dẫn; 20 cặp không có nơi gọi ở web). Khẳng định của họ chỉ được ghi [T]/[D] khi tôi đã tái hiện; còn lại giữ [M].
 
-**Hiệu chỉnh.** Ghi nhớ cũ “web gửi `notes` còn route ký đọc `signingNotes` nên ghi chú ký mất” là **sai**: web không gửi ghi chú cho bước ký (body `{}`); route `sign` đọc `signingNotes` và schema strict; chỗ rớt ghi chú thật là `organization-sign` (route nhận `notes`, `organizationSign` ở `outgoing-document-service.ts:1077-1194` không dùng). Lỗi 500 khi tải tệp lần đầu lúc rà là hiện vật môi trường (bản sao DB có dòng `file_objects` trùng `storage_key` nhưng đĩa thiếu tệp); không tính là lỗi sản phẩm, chỉ phần thông báo lỗi tiếng Anh thô là phát hiện hợp lệ (C2).
+**Hiệu chỉnh.** Bản đầu của tài liệu ghi nhầm ô “Số, ký hiệu” của tờ trình là do hệ thống cấp; thực tế do người dùng gõ tay (đã sửa ở §4.3 và T2). Ghi nhớ cũ “web gửi `notes` còn route ký đọc `signingNotes` nên ghi chú ký mất” là **sai**: web không gửi ghi chú cho bước ký (body `{}`); route `sign` đọc `signingNotes` và schema strict; chỗ rớt ghi chú thật là `organization-sign` (route nhận `notes`, `organizationSign` ở `outgoing-document-service.ts:1077-1194` không dùng). Lỗi 500 khi tải tệp lần đầu lúc rà là hiện vật môi trường (bản sao DB có dòng `file_objects` trùng `storage_key` nhưng đĩa thiếu tệp); không tính là lỗi sản phẩm, chỉ phần thông báo lỗi tiếng Anh thô là phát hiện hợp lệ (C2).
 
 **Chưa quan sát** (xem §12): Chrome thật của người dùng, thiết bị cảm ứng, trình đọc màn hình, hộp Soạn văn bản đi ở 390px, thông báo đẩy, dữ liệu production, ký số thật.
 
@@ -88,7 +88,7 @@ Luồng văn bản đến kiểu cũ (`VAN_BAN_DEN`: trình lãnh đạo, bút p
 | # | Bước | Người | Họ thấy | Gãy ở đâu | Mã |
 |---|---|---|---|---|---|
 | 1 | Mở danh sách trống | Hùng | Vừa hộp gợi ý nổi “Soạn tờ trình đầu tiên” vừa EmptyState trùng nội dung (ảnh 50) | Hai khối nói một việc | T6 |
-| 2 | Tạo | Hùng | Hộp khung cũ (không phải khung compose). “Số, ký hiệu” **bắt buộc** (“Vui lòng nhập Số ký hiệu văn bản gốc.”), placeholder ví dụ, dòng cố định “PDF hoặc Word, tối đa 10MB”; Đơn vị đề xuất không mặc định đơn vị người soạn (ảnh 51–53) | Từ vựng văn bản đến còn sót; số thật do hệ thống cấp (`01/TTr-QLĐT`) nên ô nhập thừa | T2 |
+| 2 | Tạo | Hùng | Hộp khung cũ (không phải khung compose). “Số, ký hiệu” **bắt buộc** (“Vui lòng nhập Số ký hiệu văn bản gốc.”), placeholder ví dụ, dòng cố định “PDF hoặc Word, tối đa 10MB”; Đơn vị đề xuất không mặc định đơn vị người soạn (ảnh 51–53) | Từ vựng văn bản đến còn sót; ô số **do người dùng gõ tay** (lúc rà soát tôi gõ `01/TTr-QLĐT`; dữ liệu dev có `12r1r1r`), hệ thống chỉ cấp “Số 0006” nội bộ | T2 |
 | 3 | Sau tạo | Hùng | Trạng thái **“Chờ bút phê”** ngay khi vừa tạo; mục “Luân chuyển” hiện chuỗi *văn bản đến* (“Tiếp nhận & Vào sổ — Số đến 6/2026 → Trình Ban Giám hiệu → Chỉ đạo & Bút phê → Giao đơn vị…”) song song hàng “Phê duyệt: Nháp · [Trình duyệt]” của luồng tờ trình; bốn con số (Số 0006, Số đến 6/2026, Số gốc, Số ký hiệu) (ảnh 54–55) | Hai hệ trạng thái mâu thuẫn trên một văn bản | T1 |
 | 4 | Trình | Hùng | Hộp “Trình duyệt tờ trình” **tốt**: ô tìm đơn vị liên quan, “Đơn vị của bạn [Luôn duyệt]” khóa, chân “1 đơn vị duyệt → Lãnh đạo” (ảnh 56). Sau trình: “Chờ trưởng đơn vị [Rút lại]” (ảnh 57) | — (mẫu nên dùng lại cho nơi nhận) | — |
 | 5 | Duyệt | Thí | Nhận thông báo “Tờ trình chờ bạn duyệt” (handler có). Mở tờ trình: **tệp “Bạn không có quyền xem tệp này. [Thử lại]”** (`GET /api/file-objects/:id` = 403; người soạn/BGH/Văn thư 200) (ảnh 58) [T][D] | Người duyệt không đọc được thứ mình duyệt | T3 |
@@ -225,7 +225,7 @@ Cách đọc: **Mức** P0 = dữ liệu hoặc hành động sai, hoặc luồn
 | Mã | Mức · loại | Phát hiện và bằng chứng | Đề xuất; AC |
 |---|---|---|---|
 | T1 | P1 · nhất quán | Hai hệ trạng thái trên một tờ trình: nhãn “Chờ bút phê” (luồng văn bản đến cũ) + chuỗi “Tiếp nhận & Vào sổ → Trình Ban Giám hiệu → …” song song với “Phê duyệt: Nháp [Trình duyệt]” (ảnh 54–55). Bốn con số cho một văn bản. [T] | “Bước xử lý” và mục “Luân chuyển” của tờ trình chỉ theo luồng phê duyệt tờ trình (Nháp → Chờ trưởng đơn vị → Chờ lãnh đạo → Đã phê duyệt/Cần bổ sung/Không phê duyệt); bỏ chuỗi văn bản đến; một số hiệu hiển thị. AC: không từ vựng văn bản đến ở tờ trình |
-| T2 | P1 · hành vi | Hộp tạo khung cũ (không phải khung compose); “Số, ký hiệu” bắt buộc với lỗi “Vui lòng nhập Số ký hiệu văn bản gốc.” trong khi hệ thống tự cấp `01/TTr-QLĐT`; placeholder dạng ví dụ (“VD: 125/TCGDNN-VP”); dòng cố định “PDF hoặc Word, tối đa 10MB”; Đơn vị đề xuất không mặc định đơn vị người soạn, 18 đơn vị không ô tìm (ảnh 51–53). | Chuyển sang khung compose của hộp Soạn văn bản đi; bỏ ô số/ký hiệu (hệ thống cấp); placeholder chỉ là tên ô; ràng buộc tệp nằm ở chỗ chọn tệp và trong lỗi; đơn vị mặc định = đơn vị người soạn. AC: hộp đo đúng số đo khung compose; không ô nhập nào thừa |
+| T2 | P1 · hành vi | Hộp tạo khung cũ (không phải khung compose); “Số, ký hiệu” bắt buộc với lỗi “Vui lòng nhập Số ký hiệu văn bản gốc.” trong khi đây là văn bản nội bộ do chính người soạn gõ số tay (giá trị rác như `12r1r1r` có trong dữ liệu dev), hệ thống chỉ cấp số nội bộ “Số 0006”; placeholder dạng ví dụ (“VD: 125/TCGDNN-VP”); dòng cố định “PDF hoặc Word, tối đa 10MB”; Đơn vị đề xuất không mặc định đơn vị người soạn, 18 đơn vị không ô tìm (ảnh 51–53). | Chuyển sang khung compose của hộp Soạn văn bản đi; ô số/ký hiệu thành tùy chọn, để trống thì hệ thống cấp `n/TTr-<viết tắt đơn vị>` theo dãy riêng của tờ trình; placeholder chỉ là tên ô; ràng buộc tệp nằm ở chỗ chọn tệp và trong lỗi; đơn vị mặc định = đơn vị người soạn. AC: hộp đo đúng số đo khung compose; không ô nhập nào thừa |
 | T3 | P0 · nghiệp vụ | Trưởng đơn vị được giao duyệt **không mở được tệp**: “Bạn không có quyền xem tệp này. [Thử lại]” (`GET /api/file-objects/:id` = 403 “Bạn không có quyền truy cập tệp này”; người soạn/BGH/Văn thư 200) (ảnh 58). Người duyệt không đọc được thứ mình duyệt. [T][D] | Quyền đọc tệp theo quan hệ văn bản: người có bước duyệt (đang chờ hoặc đã quyết) đọc được tệp của tờ trình. Cùng gốc với Q1: truy cập INTERNAL thiếu quan hệ đơn vị. AC: người có bước duyệt mở được tệp, người ngoài luồng vẫn 403; test ranh giới |
 | T4 | P1 · nghiệp vụ | Sau khi duyệt xong: nhãn bảng **“Đã lập hồ sơ”** (không có hồ sơ nào), “Nhiệm vụ: Chưa có · Tạo nhiệm vụ”, tờ trình dừng; không sinh văn bản đi/nhiệm vụ/hồ sơ [D][M `submission-approval-service.ts:232-331`] (ảnh 61). [gap-spec V-06: “Sau phê duyệt: tạo nhiệm vụ liên kết bằng một nút; tờ trình vào hồ sơ” — đề xuất chưa duyệt] | Nhãn đúng “Đã phê duyệt”; bước kế do chủ sở hữu quyết (§11 D2). Cho tới lúc đó chỉ sửa nhãn. AC: không nhãn “Đã lập hồ sơ” khi không có `DossierItem` |
 | T5 | P1 · hành vi | “Đồng ý” chạy ngay, không xác nhận/Hoàn tác (ảnh 58–60) trong khi việc đã báo người trình và người duyệt tiếp theo. Quy tắc: đã báo người khác thì xác nhận (không dùng cả hai). NN/g: xác nhận cụ thể, nút nêu hành động [R7]. | Hộp “Đồng ý tờ trình ‘…’ và chuyển lãnh đạo?” [Đồng ý][Quay lại]. AC: không quyết định nào chạy khi bấm lần đầu mà không xác nhận |
@@ -382,6 +382,12 @@ Cỡ: S ≈ nửa ngày, M ≈ 1–2 ngày, L > 2 ngày; ước lượng thô, c
 
 Lý do đặt A trước: A1–A5 là điều kiện để luồng chạy được với **người thật khác người soạn**; mọi cải thiện hiển thị ở B đều vô nghĩa khi người duyệt không đọc được văn bản. Không đề xuất thêm tính năng mới (xin ý kiến, đồng xử lý, liên thông trục văn bản) trước khi A xong.
 
+### 9.1. Tiến độ
+
+| Mục | Trạng thái |
+|---|---|
+| (đang triển khai theo nhánh `feat/document-flow-closure`) | |
+
 ## 10. Tiêu chí nghiệm thu chung
 
 - **Ma trận người dùng × trạng thái** (7 người dùng đã nêu × 11 trạng thái §8.1): nút hiển thị = `availableActions` của server; người không đến lượt thấy “Đang chờ …” đúng tên; không banner “Thao tác thất bại (4xx)” trần ở bất kỳ ô nào của ma trận. Có test tự động cho phần dữ liệu (bảng ánh xạ) và Playwright cho phần hiển thị.
@@ -391,21 +397,21 @@ Lý do đặt A trước: A1–A5 là điều kiện để luồng chạy đư�
 - `npm run lint` không tăng baseline; sửa dòng cũ thì làm sạch dòng đó. Không dùng `next build` để kiểm.
 - Mỗi lỗi đã báo ở đây khi sửa phải có test tái hiện (ví dụ G5: nháp → trình → ký nháy → trả lại → sửa → 200).
 
-## 11. Quyết định cần chủ sở hữu
+## 11. Quyết định (D1–D9)
 
-D1–D4 là bốn câu hỏi đã có từ nghiên cứu 22/10/2026; **chưa ai quyết, spec này không giải thay**. D5–D9 là mới từ rà soát này.
+Ngày 2026-10-23 người dùng trả lời “duyệt và tự quyết”: spec được duyệt và các câu hỏi chủ sở hữu do tác giả chọn. D1–D4 là bốn câu hỏi từ nghiên cứu 22/10/2026, D5–D9 phát sinh từ rà soát này. Mỗi lựa chọn dưới đây là **quyết định có thể đảo lại** khi chủ sở hữu có ý khác; cột “Chặn” cũ không còn chặn.
 
-| Mã | Câu hỏi | Mục bị chặn | Ghi chú |
+| Mã | Câu hỏi | Chọn (23/10/2026) | Lý do và giới hạn |
 |---|---|---|---|
-| D1 | Định vị QCET so với VNPT iOffice và loại chữ ký số thật dùng cho văn bản đi | G1, G4 | Nghiên cứu 22/10 ghi NĐ 68/2024 là chữ ký số chuyên dùng công vụ chứ không phải quy định văn thư. Trong lúc chờ chỉ làm nhãn trung thực (A7) |
-| D2 | Tờ trình sau khi duyệt: tạo nhiệm vụ, sinh văn bản đi, vào hồ sơ, hay dừng | T4 | [gap-spec V-06] |
-| D3 | Thời hạn nộp lưu hồ sơ: 01 năm (NĐ 30, Luật Lưu trữ) hay 60 ngày (TT 05/2025/TT-BNV, đã ghi nhận mâu thuẫn ở nghiên cứu 22/10) | H3, nhắc nộp lưu | |
-| D4 | Vai trò XLC/PH/xem cho từng nơi nhận, giao việc từng đơn vị nhận, gửi tới cá nhân | R1 (phần sau tiếp nhận), R7 | ADR-015 để sau |
-| D5 | Quyền đọc dự thảo của trưởng đơn vị: (a) ghi đơn vị soạn lên văn bản đi và cho trưởng/phó đơn vị soạn đọc, hay (b) chỉ người được chỉ định duyệt/ký đọc | Q1, T3, A1 | (a) khớp `hybrid-authorization.ts` đã cho trưởng đơn vị quyền duyệt; là thay đổi phân quyền |
-| D6 | Chữ viết tắt cơ quan và từng đơn vị cho ký hiệu số; có dùng chung dãy số với VNPT iOffice không (nếu QCET phát hành chính thức thì phải dùng chung để khỏi trùng số, theo NĐ 30 Điều 15) | G2, G3 | Cần dữ liệu từ chủ sở hữu |
-| D7 | Bộ từ vựng thống nhất cho gửi duyệt / quyết định duyệt / đưa vào hồ sơ / số (§5.12); cần đối chiếu `docs/ux/QCET_UI_VOCABULARY.md` | V1–V6, T7 | |
-| D8 | Đổi nghĩa “Chờ xử lý / Đã xử lý” sang theo người (§8.2) | S3, A6 | Đổi hành vi mục sidebar đã quen |
-| D9 | Luồng văn bản đến kiểu cũ (`VAN_BAN_DEN`, nút “Kết thúc” luôn lỗi): giữ, ẩn hay xóa mã | §4.2 | Chỉ dữ liệu cũ đi vào được |
+| D1 | Loại chữ ký số thật và định vị QCET so với VNPT iOffice | QCET chưa ký số bằng chứng thư. Ghi nhận **“Xác nhận ký”** nội bộ, không ghi `VALID`, không ghi nhà cung cấp CA khi không có; hiển thị rõ “Chưa ký số bằng chứng thư”; bỏ hộp ký mô phỏng ở web | Không có chứng thư hay token để tích hợp; hiển thị sự thật quan trọng hơn vẻ ngoài. Nối chữ ký số thật (NĐ 30 yêu cầu văn bản điện tử có chữ ký số của người có thẩm quyền và của cơ quan) là việc riêng khi có CA |
+| D2 | Tờ trình sau khi duyệt | Dừng ở “Đã phê duyệt”; nút “Tạo nhiệm vụ” sẵn có là bước kế; sửa nhãn sai “Đã lập hồ sơ”. Không sinh văn bản đi tự động | Gap-spec V-06 vẫn là đề xuất; giữ thay đổi nhỏ, không dựng luồng mới |
+| D3 | Thời hạn nộp lưu hồ sơ | Giữ hiện trạng 01 năm (NĐ 30, Luật Lưu trữ 33/2024) | TT 05/2025/TT-BNV (60 ngày) mâu thuẫn và chưa có hướng dẫn thống nhất; không đổi code |
+| D4 | Vai trò XLC/PH/xem, giao việc từng đơn vị nhận, gửi cá nhân | Hoãn (giữ ADR-015). Chỉ làm: “Tiếp nhận” thành nút chính, báo ngược cho người phát hành | Mở rộng nghiệp vụ lớn, cần người dùng cuối cho biết cách trường làm |
+| D5 | Quyền đọc dự thảo của trưởng đơn vị | (a) có giới hạn: ghi **đơn vị soạn** lên văn bản đi (cột mới `draftingUnitId` ở quy trình văn bản đi); **trưởng/phó đơn vị soạn** và người được chỉ định duyệt/ký đọc được; thành viên khác của đơn vị **không** đọc nháp | Khớp quyền duyệt đã có trong `hybrid-authorization.ts`; không nới rộng hơn mức cần |
+| D6 | Viết tắt cơ quan/đơn vị cho ký hiệu; dãy số chung với VNPT | Cơ quan = `CĐKTCNQN` (đúng như QĐ 283/QĐ-CĐKTCNQN và QĐ 420/QĐ-CĐKTCNQN đã dẫn trong mã), đặt trong `INSTITUTION_CONFIG`. Đơn vị = `metadata.shortName` của đơn vị nếu có, nếu không lấy **chữ cái đầu các từ của tên đơn vị** bỏ “Phòng/Khoa/Trung tâm/Ban”, “và”, “&” (Phòng Quản lý Đào tạo → QLĐT; Phòng Tài chính - Kế toán → TCKT; Khoa Công nghệ thông tin → CNTT). Ký hiệu theo loại văn bản (Phụ lục III NĐ 30). Dãy số giữ hiện trạng: riêng của QCET theo loại và năm | Văn thư sửa được ký hiệu trước khi cấp. Nếu QCET phát hành chính thức song song với VNPT thì phải thống nhất dãy số — rủi ro trùng số được ghi ở §12, không giải bằng code |
+| D7 | Từ vựng | Giữ hai bộ nút quyết định vì nghĩa khác (tờ trình có “Không phê duyệt”). Sửa chỗ gây hiểu sai: trạng thái kết thúc đúng nghĩa (“Đã phê duyệt”, “Đã phát hành”, “Đã lưu hồ sơ” chỉ khi có hồ sơ thật); một tên “Lưu hồ sơ”; “Số, ký hiệu” đầy đủ. Không đổi tên hàng loạt | Tránh đổi thuật ngữ khi chưa đối chiếu hết `QCET_UI_VOCABULARY.md` |
+| D8 | Đổi nghĩa “Chờ xử lý / Đã xử lý” | Đổi theo người (§8.2) cho Văn bản đi | Đúng nhu cầu “tới lượt tôi”; mục sidebar giữ nguyên tên |
+| D9 | Luồng văn bản đến kiểu cũ | Giữ mã, không đầu tư; không sửa nút “Kết thúc” trong đợt này. Ghi vào “Còn tồn” | Chỉ dữ liệu cũ đi vào; sửa cần quyết định về hồ sơ kết quả |
 
 ## 12. Chưa kiểm và giới hạn
 
