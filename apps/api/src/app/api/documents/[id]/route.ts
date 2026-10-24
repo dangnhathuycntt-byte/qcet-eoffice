@@ -20,7 +20,11 @@ import {
   getDocumentById,
   isDocumentMarked,
 } from "@/server/documents/document-service";
-import { isDocumentImmutable } from "@/server/documents/state-machine";
+import {
+  isDocumentImmutable,
+  isOutgoingUnderReview,
+  OUTGOING_UNDER_REVIEW_CODE,
+} from "@/server/documents/state-machine";
 import { validateDocumentUpdatePayload } from "@/lib/documents/document-validator";
 import {
   NotFoundError,
@@ -35,6 +39,7 @@ import {
   authorize,
 } from "@/server/authorization";
 import { readDocumentForUser } from "@/server/documents/read-document-for-user";
+import { buildOutgoingStepView } from "@/server/documents/outgoing-step-view";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -67,7 +72,10 @@ export async function GET(
     );
     const documentDTO = toDocumentDetailDTO(document);
     // Cùng điều kiện với PATCH và bổ sung tệp: UI chỉ hiện "Sửa"/"Thêm tệp" khi thao tác thực sự được phép
-    const canEdit = canUpdateDocument(authContext, document) && !isDocumentImmutable(document);
+    const canEdit =
+      canUpdateDocument(authContext, document) && !isDocumentImmutable(document) && !isOutgoingUnderReview(document);
+    // Văn bản đi: thao tác của bước đang chờ mà người xem được làm, và ai đang giữ bước (null ở loại khác)
+    const outgoingStep = await buildOutgoingStepView(authUser, document);
 
     return apiSuccess(
       {
@@ -77,12 +85,14 @@ export async function GET(
           availableActions,
           canEdit,
           marked,
+          outgoingStep,
         },
         document: {
           ...documentDTO,
           availableActions,
           canEdit,
           marked,
+          outgoingStep,
         },
         availableActions,
       },
@@ -249,6 +259,13 @@ export async function DELETE(
         "Văn bản đã được ký hoặc đã ban hành/hoàn thành là bất biến, không thể xóa.",
         undefined,
         "IMMUTABLE_DOCUMENT"
+      );
+    }
+    if (isOutgoingUnderReview(existing)) {
+      throw new ValidationError(
+        "Dự thảo đang chờ duyệt nên không xóa được. Hãy rút lại về Nháp rồi xóa.",
+        undefined,
+        OUTGOING_UNDER_REVIEW_CODE
       );
     }
 

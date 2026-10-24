@@ -68,6 +68,63 @@ export interface DocumentDirectiveItem {
   createdAt?: string;
 }
 
+/** Thao tác theo bước của văn bản đi; mỗi giá trị là tên route `/api/documents/{id}/actions/{slug}`. */
+export type OutgoingStepSlug =
+  | 'submit-content-review'
+  | 'withdraw-content-review'
+  | 'approve-content'
+  | 'reject-content'
+  | 'approve-format'
+  | 'sign'
+  | 'assign-number'
+  | 'organization-sign';
+
+/** Ai đang giữ bước và việc đang chờ; hiện thành "Đang chờ <who> <task>". */
+export interface OutgoingWaiting {
+  who: string;
+  task: string;
+  /** Thời điểm bước bắt đầu chờ (ISO), khi biết. */
+  since: string | null;
+}
+
+/** Người có thể được chọn duyệt nội dung dự thảo khi trình. */
+export interface OutgoingReviewer {
+  id: string;
+  name: string;
+  /** Chức danh kèm đơn vị, ví dụ "Trưởng phòng · Phòng Đào tạo". */
+  title: string;
+  /** Mặc định của bước trình: trưởng đơn vị soạn. */
+  recommended: boolean;
+}
+
+/** Lần trả lại gần nhất của dự thảo đang ở Nháp: ai trả, khi nào, lý do (null khi người trả không ghi lý do). */
+export interface OutgoingReturned {
+  by: string | null;
+  at: string | null;
+  note: string | null;
+}
+
+/** Xem trước hộp Cấp số (`GET .../actions/assign-number/preview`): số, ký hiệu mặc định và khoảng ngày ban hành (`YYYY-MM-DD`, múi giờ Việt Nam). */
+export interface OutgoingNumberPreview {
+  year: number;
+  number: number;
+  notation: string;
+  numberStr: string;
+  issuedDate: string;
+  minIssuedDate: string;
+  maxIssuedDate: string;
+}
+
+/** Thao tác người xem được làm lúc này và việc đang chờ; server tính cho từng người xem. */
+export interface OutgoingStepView {
+  actions: OutgoingStepSlug[];
+  waiting: OutgoingWaiting | null;
+  /** Dự thảo bị trả lại để sửa (đang ở Nháp sau khi người duyệt trả); null ở mọi trường hợp khác. */
+  returned: OutgoingReturned | null;
+  /** Người chọn được làm người duyệt; chỉ có khi người xem trình được dự thảo. */
+  reviewers: OutgoingReviewer[];
+}
+
 export interface DocumentItem {
   id: string;
   type: DocumentType;
@@ -111,6 +168,10 @@ export interface DocumentItem {
   /** Người đang xem đã đánh dấu văn bản này. */
   marked?: boolean;
   outgoingWorkflow?: any;
+  /** Văn bản đi: thao tác của bước đang chờ mà người xem được làm và ai đang giữ bước; server tính theo người xem. */
+  outgoingStep?: OutgoingStepView | null;
+  /** Dự thảo văn bản đi đã bị người duyệt trả lại và chưa trình lại (chip "Cần sửa"). */
+  needsRevision?: boolean;
   /** Nơi nhận có định danh của văn bản đi; đơn vị trong trường đọc được văn bản từ lúc phát hành (ADR-015). */
   outgoingRecipients?: Array<{ kind: string; unitId: string | null }>;
   signatures?: any[];
@@ -139,6 +200,7 @@ export interface OfficialDocument {
   documentYear?: number;        // Năm của sổ
   dueDate?: string;             // Hạn xử lý (YYYY-MM-DD)
   workflowStatus?: string;      // Trạng thái workflow chi tiết (xem bản đồ hệ thống: Quy trình 6/7)
+  needsRevision?: boolean;      // Dự thảo văn bản đi bị trả lại, chưa trình lại
   issuedDate: string;           // Ngày ban hành (YYYY-MM-DD)
   receivedDate?: string;        // Ngày tiếp nhận vào sổ (YYYY-MM-DD)
   issuingAuthority: string;     // Cơ quan / Đơn vị ban hành

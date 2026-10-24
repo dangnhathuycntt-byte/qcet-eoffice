@@ -101,7 +101,7 @@ export function documentNumberOf(doc: DocumentItem): string {
 }
 
 function documentStatusLabel(doc: DocumentItem): string {
-  return getLedgerStepLabel(doc.status, doc.workflowStatus ?? undefined, doc.type).label;
+  return getLedgerStepLabel(doc.status, doc.workflowStatus ?? undefined, doc.type, doc.needsRevision).label;
 }
 
 export function documentSource(doc: DocumentItem): AssistantSourceRef {

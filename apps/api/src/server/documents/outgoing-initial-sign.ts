@@ -7,7 +7,8 @@
  * Ký từ xa qua dịch vụ ký số chưa làm: cần chọn nhà cung cấp (ADR-V08).
  */
 import { z } from "zod";
-import { OutgoingDocumentStatus, SignatureType, SignatureVerificationStatus } from "@prisma/client";
+import { OutgoingDocumentStatus, SignatureType } from "@prisma/client";
+import { INTERNAL_CONFIRMATION_STATUS } from "@/server/documents/internal-signature";
 import { prisma } from "@qcet/db/prisma";
 import type { SessionPayload } from "@/lib/jwt-session";
 import { auditService, AuditAction, AuditEntityType } from "@qcet/db/audit";
@@ -32,14 +33,19 @@ export async function evaluateInitialSign(
   ctx: AuthorizationContext,
   userId: string,
   doc: { id: string; securityLevel: string; status: string; registeredById: string },
-  wf: { status: OutgoingDocumentStatus; currentVersion: number; authorizedSignedAt: Date | null }
+  wf: { status: OutgoingDocumentStatus; currentVersion: number; authorizedSignedAt: Date | null; draftingUnitId?: string | null }
 ): Promise<{ allowed: true } | { allowed: false; code: "FORBIDDEN" | "INITIAL_SIGN_NOT_ALLOWED" | "INITIAL_SIGN_DUPLICATE"; message: string }> {
-  const drafterUnit = await prisma.positionAssignment.findFirst({
-    where: { userId: doc.registeredById, status: "ACTIVE" },
-    orderBy: { effectiveFrom: "desc" },
-    select: { unitId: true },
-  });
-  const resource = { ...submissionResource(doc), ...(drafterUnit ? { draftingUnitId: drafterUnit.unitId } : {}) };
+  // Đơn vị soạn ghi trên văn bản; dự thảo cũ chưa có thì lấy theo chức vụ hiện tại của người soạn.
+  const draftingUnitId =
+    wf.draftingUnitId ??
+    (
+      await prisma.positionAssignment.findFirst({
+        where: { userId: doc.registeredById, status: "ACTIVE" },
+        orderBy: { effectiveFrom: "desc" },
+        select: { unitId: true },
+      })
+    )?.unitId;
+  const resource = { ...submissionResource(doc), ...(draftingUnitId ? { draftingUnitId } : {}) };
   const decision = authorize(ctx, "document.outgoing.initial_sign", resource);
   if (!decision.allowed || doc.registeredById === userId) {
     return { allowed: false, code: "FORBIDDEN", message: decision.reason || "Bạn không có quyền ký nháy văn bản này" };
@@ -83,7 +89,7 @@ export async function initialSignOutgoing(session: SessionPayload, documentId: s
         signatureType: SignatureType.INITIAL,
         certificateMetadata: { kind: "INITIAL", ...(note ? { note } : {}) },
         signedAt: now,
-        verificationStatus: SignatureVerificationStatus.VALID,
+        verificationStatus: INTERNAL_CONFIRMATION_STATUS,
       },
     });
     await auditService.logEvent(tx, {

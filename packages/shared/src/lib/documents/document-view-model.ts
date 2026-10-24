@@ -58,7 +58,6 @@ export interface DocumentViewModel {
   linkedTaskId: string | null;
   linkedTask: ViewLinkedTask | null;
   /** Văn bản đã có chữ ký số (mở hộp thoại xem chữ ký). */
-  hasSignature: boolean;
 }
 
 const KIND_BY_TYPE: Record<string, DocumentKind> = {
@@ -109,8 +108,13 @@ const dateOnly = (value?: string | Date | null) => (value ? (typeof value === "s
 
 const toRows = (rows: Array<ViewDetailRow | null>): ViewDetailRow[] => rows.filter((row): row is ViewDetailRow => Boolean(row && row.value));
 
-const stepKindOf = (status: DocumentStatus, workflowStatus: string | null | undefined, kind: DocumentKind) =>
-  getLedgerStepLabel(status, workflowStatus ?? undefined, kind === "incoming" ? "inbox" : kind === "outgoing" ? "outbox" : "submission");
+const stepKindOf = (status: DocumentStatus, workflowStatus: string | null | undefined, kind: DocumentKind, needsRevision?: boolean) =>
+  getLedgerStepLabel(
+    status,
+    workflowStatus ?? undefined,
+    kind === "incoming" ? "inbox" : kind === "outgoing" ? "outbox" : "submission",
+    needsRevision
+  );
 
 /** Đường dẫn mở văn bản trong Quick View của sổ văn bản (không còn trang chi tiết riêng); `fileId` giữ tệp đang xem. */
 export function getDocumentHref(id: string, fileId?: string | null): string {
@@ -124,7 +128,7 @@ export function fromDocumentItem(item: DocumentItem, now?: string): DocumentView
   const out = item.outgoingWorkflow as { status?: string; outgoingNumber?: string | number; codeNotation?: string; issuedDate?: string; draftingDeptName?: string; authorizedSigner?: { name?: string } } | null | undefined;
   const inc = item.incomingWorkflow as { leadUnit?: { name?: string } } | null | undefined;
   const workflowStatus = kind === "outgoing" ? out?.status ?? "DRAFT" : item.workflowStatus ?? null;
-  const step = stepKindOf(item.status, workflowStatus, kind);
+  const step = stepKindOf(item.status, workflowStatus, kind, item.needsRevision);
   const urgencyTag = getLedgerUrgencyTag(item.urgency);
   const due = dateOnly(item.dueDate);
   const outNumber = out?.outgoingNumber ? `${out.outgoingNumber}${out.codeNotation ? `/${out.codeNotation}` : ""}` : null;
@@ -183,14 +187,13 @@ export function fromDocumentItem(item: DocumentItem, now?: string): DocumentView
     files,
     linkedTaskId: item.linkedTaskId ?? null,
     linkedTask,
-    hasSignature: (item.signatures?.length ?? 0) > 0,
   };
 }
 
 /** Từ dòng danh sách đã map (`OfficialDocument`): đủ để dựng tiêu đề ngay khi dữ liệu chi tiết còn đang tải. */
 export function fromOfficialDocument(doc: OfficialDocument, now?: string): DocumentViewModel {
   const kind = getDocumentKind(doc.type);
-  const step = stepKindOf(doc.status, doc.workflowStatus, kind);
+  const step = stepKindOf(doc.status, doc.workflowStatus, kind, doc.needsRevision);
   const urgencyTag = getLedgerUrgencyTag(doc.urgency);
   const files = doc.attachments?.length
     ? doc.attachments.map((a) => ({ id: a.id, name: a.name, url: a.url, sizeBytes: a.sizeBytes, mimeType: a.mimeType }))
@@ -227,6 +230,5 @@ export function fromOfficialDocument(doc: OfficialDocument, now?: string): Docum
           progressPercent: doc.linkedTaskProgressPercent,
         }
       : null,
-    hasSignature: (doc.signatures?.length ?? 0) > 0,
   };
 }

@@ -48,9 +48,24 @@ import {
 import type { SessionPayload } from "@/lib/jwt-session";
 import type { AuthenticatedUser } from "@/server/api/request-context";
 import { buildDocumentReadWhere } from "@/server/policies/document-policy";
+import {
+  isDeputyUnitLeaderPosition,
+  isExecutivePosition,
+  isUnitLeaderPosition,
+} from "@/server/authorization/authorization-engine";
 import { INSTITUTION_CONFIG, getOfficialSigningCapacity } from "@qcet/shared/config/institution";
-import { getNextRegistrationNumber } from "@/server/documents/numbering-engine";
+import { getNextRegistrationNumber, peekNextRegistrationNumber } from "@/server/documents/numbering-engine";
+import {
+  assertValidNotation,
+  currentNumberingYear,
+  issuedDateBounds,
+  resolveDefaultNotation,
+  resolveIssuedDate,
+} from "@/server/documents/outgoing-numbering";
 import { assertReplacementAllowed, resolveRecipientRows, type RecipientInput } from "@/server/documents/outgoing-recipients";
+import { formatReturnedNote, type OutgoingStepSlug } from "@qcet/shared/domain/documents/outgoing-steps";
+import { listContentReviewers } from "@/server/documents/outgoing-reviewers";
+import { INTERNAL_CONFIRMATION_STATUS, internalConfirmationMetadata } from "@/server/documents/internal-signature";
 import {
   OutgoingDocumentStateMachine,
   isDocumentImmutable,
@@ -76,6 +91,10 @@ export interface CreateOutgoingDraftInput {
   fileSize?: number;
   fileType?: string;
   notes?: string;
+}
+
+export interface WithdrawContentReviewInput {
+  documentId: string;
 }
 
 export interface SubmitContentReviewInput {
@@ -182,6 +201,158 @@ export interface OutgoingWorkflowWithDetails extends DocumentOutgoingWorkflow {
 // Service Implementation
 // ============================================================================
 
+/**
+ * Đơn vị soạn của dự thảo: `draftingDeptId` nếu chính là đơn vị người soạn đang giữ chức danh, rồi đơn vị đang làm
+ * việc trong phiên, rồi đơn vị chính. Không nhận đơn vị người soạn không thuộc về, kẻo trưởng đơn vị khác đọc được dự thảo.
+ */
+async function resolveDraftingUnitId(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  requestedUnitId: string | undefined,
+  activeUnitId: string | undefined
+): Promise<string | null> {
+  const assignments = await tx.positionAssignment.findMany({
+    where: { userId, status: "ACTIVE" },
+    select: { unitId: true, type: true },
+    orderBy: { effectiveFrom: "asc" },
+  });
+  const unitIds = new Set(assignments.map((a) => a.unitId));
+  if (requestedUnitId && unitIds.has(requestedUnitId)) return requestedUnitId;
+  if (activeUnitId) return activeUnitId;
+  return assignments.find((a) => a.type === "PRIMARY")?.unitId ?? assignments[0]?.unitId ?? null;
+}
+
+/**
+ * Duyệt hoặc trả lại nội dung dự thảo chỉ thuộc về người được trình, trưởng/phó đơn vị soạn hoặc lãnh đạo trường.
+ * Quyền theo chức danh (`assertAuthorized`) không xét đơn vị, nên thiếu bước này thì trưởng đơn vị khác duyệt được
+ * dự thảo không phải của mình. Dự thảo cũ chưa có đơn vị soạn và chưa chỉ định người duyệt giữ nguyên hành vi cũ.
+ */
+async function assertContentReviewScope(
+  userId: string,
+  workflow: { contentReviewerId: string | null; draftingUnitId: string | null }
+): Promise<void> {
+  if (workflow.contentReviewerId === userId) return;
+  if (!workflow.contentReviewerId && !workflow.draftingUnitId) return;
+  const assignments = await prisma.positionAssignment.findMany({
+    where: { userId, status: "ACTIVE" },
+    select: { unitId: true, positionDefinition: { select: { code: true } } },
+  });
+  const allowed = assignments.some((a) => {
+    const code = a.positionDefinition.code;
+    if (isExecutivePosition(code)) return true;
+    return (
+      a.unitId === workflow.draftingUnitId && (isUnitLeaderPosition(code) || isDeputyUnitLeaderPosition(code))
+    );
+  });
+  if (!allowed) {
+    throw new ForbiddenError("Chỉ người được trình duyệt hoặc trưởng/phó đơn vị soạn mới duyệt nội dung dự thảo này.");
+  }
+}
+
+/** Dữ liệu cần để xét ai được làm bước nào; `existing` của mọi lệnh bước (kèm `document`) thỏa kiểu này. */
+export interface OutgoingStepSubject {
+  documentId: string;
+  status: OutgoingDocumentStatus;
+  contentReviewerId: string | null;
+  formatReviewerId: string | null;
+  authorizedSignerId: string | null;
+  draftingUnitId: string | null;
+  document: { registeredById: string; signerName: string | null };
+}
+
+type StepAuthCheck = (action: Parameters<typeof assertAuthorized>[1], resource: AuthorizationResource) => Promise<unknown>;
+
+/** Phó Hiệu trưởng ký thay (KT.), còn lại ký chức danh của người có thẩm quyền. */
+function outgoingSignAction(user: AuthenticatedUserContext): "document.outgoing.authorized_sign" | "document.outgoing.sign_kt" {
+  const pos = (user.activePositionCode || "").toUpperCase();
+  return pos.includes("PHO_HIEU_TRUONG") || pos.includes("PHT")
+    ? "document.outgoing.sign_kt"
+    : "document.outgoing.authorized_sign";
+}
+
+/**
+ * Người làm có được làm bước này không: phân tách nhiệm vụ, phạm vi duyệt rồi quyền theo chức danh. Lệnh ghi và việc
+ * tính thao tác hiện cho người xem (`outgoingStep`) cùng đi qua đây nên nút hiện đúng bằng điều server chấp nhận.
+ * `check` là `assertAuthorized` ở lệnh ghi; ở việc tính nút là phép kiểm không ghi nhật ký từ chối.
+ * Trạng thái xuất phát do từng lệnh kiểm trước (409 đứng trước 403).
+ */
+export async function runOutgoingStepGate(
+  step: OutgoingStepSlug,
+  user: AuthenticatedUserContext,
+  existing: OutgoingStepSubject,
+  check: StepAuthCheck
+): Promise<void> {
+  const drafterId = existing.document.registeredById;
+  const id = existing.documentId;
+  const owner = { primaryOwnerId: drafterId, createdById: drafterId };
+  switch (step) {
+    case "submit-content-review":
+      // Chỉ người soạn trình dự thảo của mình; quyền theo chức danh không phân biệt người soạn với người khác.
+      if (user.id !== drafterId) throw new ForbiddenError("Chỉ người soạn mới trình duyệt dự thảo của mình.");
+      await check("document.outgoing.submit_content_review", { id, type: "document", scope: "unit", ...owner, drafterId });
+      return;
+    case "withdraw-content-review":
+      // Chỉ người soạn lấy lại dự thảo của mình khi người duyệt chưa quyết.
+      if (user.id !== drafterId) throw new ForbiddenError("Chỉ người soạn mới rút lại dự thảo của mình.");
+      await check("document.outgoing.submit_content_review", { id, type: "document", scope: "unit", ...owner, drafterId });
+      return;
+    case "approve-content":
+    case "reject-content":
+      // Separation of Duties: người soạn không tự duyệt hay trả lại nội dung của mình.
+      OutgoingDocumentStateMachine.assertDrafterNotContentReviewer(drafterId, user.id);
+      await assertContentReviewScope(user.id, existing);
+      await check(
+        step === "approve-content" ? "document.outgoing.approve_content" : "document.outgoing.review_content",
+        { id, type: "document", scope: "unit", ...owner, drafterId, draftingUserId: drafterId }
+      );
+      return;
+    case "approve-format":
+      await check("document.outgoing.approve_format", { id, type: "document", scope: "school", ...owner, drafterId });
+      return;
+    case "sign":
+      // Separation of Duties: người kiểm thể thức không tự ký thẩm quyền.
+      if (existing.formatReviewerId === user.id) {
+        throw new ForbiddenError(
+          "Cán bộ kiểm tra thể thức không được tự ký thẩm quyền văn bản (Format Checker != Signer)."
+        );
+      }
+      await check(outgoingSignAction(user), {
+        id,
+        type: "document",
+        scope: "school",
+        ...owner,
+        drafterId,
+        formatReviewerId: existing.formatReviewerId || undefined,
+      });
+      return;
+    case "assign-number":
+    case "organization-sign": {
+      // Separation of Duties: người ký không tự cấp số hay đóng dấu số cơ quan.
+      if (step === "assign-number") {
+        OutgoingDocumentStateMachine.assertSignerNotNumberer(existing.authorizedSignerId, user.id);
+      } else {
+        OutgoingDocumentStateMachine.assertSignerNotOrganizationSigner(existing.authorizedSignerId, user.id);
+      }
+      if (existing.document.signerName === user.name) {
+        throw new ForbiddenError(
+          step === "assign-number"
+            ? "Người ký văn bản không được tự cấp số hoặc đóng dấu số cơ quan (Signer != Numberer)."
+            : "Người ký văn bản không được tự đóng dấu số cơ quan (Signer != Org Signer)."
+        );
+      }
+      await check(step === "assign-number" ? "document.outgoing.assign_number" : "document.outgoing.organization_sign", {
+        id,
+        type: "document",
+        scope: "school",
+        ...owner,
+        signerId: existing.authorizedSignerId || undefined,
+        authorizedSignerId: existing.authorizedSignerId || undefined,
+      });
+      return;
+    }
+  }
+}
+
 export class OutgoingDocumentService {
   /**
    * Helper to verify that a signed document cannot be modified directly.
@@ -255,7 +426,7 @@ export class OutgoingDocumentService {
           originalNumber: `DRAFT-${documentYear}-${Math.abs(regNumber)}`,
           issuedDate: now,
           issuingAuthority: INSTITUTION_CONFIG.issuingAuthority,
-          category: input.category || "Quyết định",
+          category: input.category || "Công văn",
           summary,
           urgency: input.urgency || DocumentUrgency.THUONG,
           securityLevel: input.securityLevel || DocumentSecurityLevel.THUONG,
@@ -284,12 +455,14 @@ export class OutgoingDocumentService {
       }
 
       // 2. Create Outgoing Workflow record
+      const draftingUnitId = await resolveDraftingUnitId(tx, user.id, input.draftingDeptId, user.departmentId);
       const workflow = await tx.documentOutgoingWorkflow.create({
         data: {
           documentId: document.id,
           status: OutgoingDocumentStatus.DRAFT,
           currentVersion: 1,
           authorizedSignerId: input.authorizedSignerId,
+          draftingUnitId,
         },
       });
 
@@ -354,28 +527,38 @@ export class OutgoingDocumentService {
       );
     }
 
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "unit",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-    };
+    await runOutgoingStepGate("submit-content-review", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
 
-    await assertAuthorized(user, "document.outgoing.submit_content_review", resource);
+    // Người duyệt: người soạn chọn trong danh sách trưởng đơn vị soạn và lãnh đạo; không chọn thì mặc định trưởng đơn vị soạn.
+    const reviewers = await listContentReviewers(existing.draftingUnitId, existing.document.registeredById);
+    if (input.contentReviewerId && !reviewers.some((r) => r.id === input.contentReviewerId)) {
+      throw new ValidationError(
+        "Người được chọn không phải trưởng đơn vị soạn hay lãnh đạo trường nên không duyệt được nội dung dự thảo này.",
+        undefined,
+        "INVALID_CONTENT_REVIEWER"
+      );
+    }
+    const contentReviewerId = input.contentReviewerId ?? reviewers.find((r) => r.recommended)?.id ?? null;
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
-      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
-        where: { documentId: input.documentId },
+      // Nhận việc có điều kiện trạng thái: hai lần bấm đồng thời chỉ một lần trình được
+      const claimed = await tx.documentOutgoingWorkflow.updateMany({
+        where: { documentId: input.documentId, status: OutgoingDocumentStatus.DRAFT },
         data: {
           status: OutgoingDocumentStatus.CONTENT_REVIEW,
           contentReviewSubmittedAt: now,
-          contentReviewerId: input.contentReviewerId,
-          contentReviewNotes: input.notes,
+          contentReviewerId,
+          // Lời nhắn của người soạn thay cho ghi chú trả lại của lần trước (lịch sử trả lại còn trong nhật ký)
+          contentReviewNotes: input.notes ?? null,
         },
       });
+      if (claimed.count === 0) {
+        throw new InvalidTransitionError("Dự thảo đã được trình hoặc đã thay đổi trạng thái. Hãy tải lại.");
+      }
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: input.documentId } });
 
       await tx.document.update({
         where: { id: input.documentId },
@@ -394,7 +577,7 @@ export class OutgoingDocumentService {
         afterData: {
           status: updatedWorkflow.status,
           contentReviewSubmittedAt: now,
-          contentReviewerId: input.contentReviewerId,
+          contentReviewerId,
         },
       });
 
@@ -404,8 +587,82 @@ export class OutgoingDocumentService {
         aggregateId: input.documentId,
         payload: {
           documentId: input.documentId,
-          contentReviewerId: input.contentReviewerId,
+          contentReviewerId,
           submittedBy: user.id,
+        },
+      });
+
+      return updatedWorkflow;
+    });
+  }
+
+  /**
+   * 2b. WITHDRAW CONTENT REVIEW (Rút lại)
+   * Người soạn lấy dự thảo về Nháp khi người duyệt chưa quyết; người duyệt mất việc khỏi hàng đợi và được báo.
+   */
+  static async withdrawContentReview(
+    input: WithdrawContentReviewInput,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser,
+    context?: { requestId?: string }
+  ) {
+    const user = await resolveUserContext(actor);
+    const requestId = context?.requestId || `req_${Date.now()}`;
+
+    const existing = await prisma.documentOutgoingWorkflow.findUnique({
+      where: { documentId: input.documentId },
+      include: { document: true },
+    });
+    if (!existing) {
+      throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
+    }
+    if (existing.status !== OutgoingDocumentStatus.CONTENT_REVIEW) {
+      throw new InvalidTransitionError(
+        `Chỉ rút lại được dự thảo đang chờ duyệt nội dung (trạng thái hiện tại: ${existing.status}). Người duyệt có thể đã xử lý xong.`
+      );
+    }
+
+    await runOutgoingStepGate("withdraw-content-review", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
+
+    return prisma.$transaction(async (tx) => {
+      const claimed = await tx.documentOutgoingWorkflow.updateMany({
+        where: { documentId: input.documentId, status: OutgoingDocumentStatus.CONTENT_REVIEW },
+        data: {
+          status: OutgoingDocumentStatus.DRAFT,
+          contentReviewSubmittedAt: null,
+          contentReviewerId: null,
+          contentReviewNotes: null,
+        },
+      });
+      if (claimed.count === 0) {
+        throw new InvalidTransitionError("Người duyệt vừa xử lý dự thảo này nên không rút lại được. Hãy tải lại.");
+      }
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: input.documentId } });
+
+      await tx.document.update({
+        where: { id: input.documentId },
+        data: { status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.DRAFT) },
+      });
+
+      await auditService.logEvent(tx, {
+        actorId: user.id,
+        action: "DOCUMENT_CONTENT_REVIEW_WITHDRAWN",
+        entityType: AuditEntityType.DOCUMENT,
+        entityId: input.documentId,
+        requestId,
+        beforeData: { status: existing.status, contentReviewerId: existing.contentReviewerId },
+        afterData: { status: updatedWorkflow.status },
+      });
+
+      await publishOutboxEvent(tx, {
+        eventType: "DOCUMENT_CONTENT_REVIEW_WITHDRAWN",
+        aggregateType: OutboxAggregateType.DOCUMENT,
+        aggregateId: input.documentId,
+        payload: {
+          documentId: input.documentId,
+          drafterId: user.id,
+          contentReviewerId: existing.contentReviewerId,
         },
       });
 
@@ -435,37 +692,22 @@ export class OutgoingDocumentService {
       throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
     }
 
-    if (
-      existing.status !== OutgoingDocumentStatus.CONTENT_REVIEW &&
-      existing.status !== OutgoingDocumentStatus.DRAFT
-    ) {
+    // Chỉ dự thảo đã trình mới duyệt được: bản nháp chưa trình (hoặc đã được người soạn rút lại) không phải việc của người duyệt.
+    if (existing.status !== OutgoingDocumentStatus.CONTENT_REVIEW) {
       throw new InvalidTransitionError(
-        `Không thể phê duyệt nội dung ở trạng thái hiện tại (${existing.status}).`
+        `Không thể phê duyệt nội dung ở trạng thái hiện tại (${existing.status}). Yêu cầu trạng thái CONTENT_REVIEW.`
       );
     }
 
-    // Separation of Duties check: Drafter cannot approve content!
-    OutgoingDocumentStateMachine.assertDrafterNotContentReviewer(
-      existing.document.registeredById,
-      user.id
+    await runOutgoingStepGate("approve-content", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
     );
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "unit",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-      draftingUserId: existing.document.registeredById,
-    };
-
-    await assertAuthorized(user, "document.outgoing.approve_content", resource);
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
-      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
-        where: { documentId: input.documentId },
+      // Nhận việc có điều kiện trạng thái: người soạn rút lại giữa chừng thì không duyệt nhầm bản nháp
+      const claimed = await tx.documentOutgoingWorkflow.updateMany({
+        where: { documentId: input.documentId, status: OutgoingDocumentStatus.CONTENT_REVIEW },
         data: {
           status: OutgoingDocumentStatus.FORMAT_CHECK,
           contentApprovedAt: now,
@@ -474,6 +716,10 @@ export class OutgoingDocumentService {
           formatReviewSubmittedAt: now,
         },
       });
+      if (claimed.count === 0) {
+        throw new InvalidTransitionError("Dự thảo đã được người soạn rút lại hoặc xử lý ở bước khác. Hãy tải lại.");
+      }
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: input.documentId } });
 
       await tx.document.update({
         where: { id: input.documentId },
@@ -538,36 +784,24 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Drafter cannot review/reject content as reviewer
-    OutgoingDocumentStateMachine.assertDrafterNotContentReviewer(
-      existing.document.registeredById,
-      user.id
+    await runOutgoingStepGate("reject-content", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
     );
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "unit",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-      draftingUserId: existing.document.registeredById,
-    };
-
-    await assertAuthorized(user, "document.outgoing.review_content", resource);
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
-      const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
-        where: { documentId: input.documentId },
+      const claimed = await tx.documentOutgoingWorkflow.updateMany({
+        where: { documentId: input.documentId, status: OutgoingDocumentStatus.CONTENT_REVIEW },
         data: {
           status: OutgoingDocumentStatus.DRAFT,
-          contentReviewNotes: input.notes
-            ? `[Trả lại]: ${input.notes}`
-            : "[Trả lại soạn thảo để chỉnh sửa nội dung]",
+          contentReviewNotes: formatReturnedNote(input.notes),
           contentReviewSubmittedAt: null,
         },
       });
+      if (claimed.count === 0) {
+        throw new InvalidTransitionError("Dự thảo đã được người soạn rút lại hoặc xử lý ở bước khác. Hãy tải lại.");
+      }
+      const updatedWorkflow = await tx.documentOutgoingWorkflow.findUniqueOrThrow({ where: { documentId: input.documentId } });
 
       await tx.document.update({
         where: { id: input.documentId },
@@ -707,16 +941,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "school",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-    };
-
-    await assertAuthorized(user, "document.outgoing.approve_format", resource);
+    await runOutgoingStepGate("approve-format", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -800,32 +1027,8 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Format reviewer cannot sign as authorized signer!
-    if (existing.formatReviewerId === user.id) {
-      throw new ForbiddenError(
-        "Cán bộ kiểm tra thể thức không được tự ký thẩm quyền văn bản (Format Checker != Signer)."
-      );
-    }
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "school",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      drafterId: existing.document.registeredById,
-      formatReviewerId: existing.formatReviewerId || undefined,
-    };
-
-    // Determine appropriate sign action
-    let signAction: "document.outgoing.authorized_sign" | "document.outgoing.sign_kt" =
-      "document.outgoing.authorized_sign";
-    const pos = (user.activePositionCode || "").toUpperCase();
-    if (pos.includes("PHO_HIEU_TRUONG") || pos.includes("PHT")) {
-      signAction = "document.outgoing.sign_kt";
-    }
-
-    await assertAuthorized(user, signAction, resource);
+    const signAction = outgoingSignAction(user);
+    await runOutgoingStepGate("sign", user, existing, (action, resource) => assertAuthorized(user, action, resource));
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -844,13 +1047,9 @@ export class OutgoingDocumentService {
           signerAssignmentId: (user as any).activeAssignmentId || null,
           signingCapacity,
           signatureType: input.signatureType || SignatureType.PERSONAL_DIGITAL,
-          certificateMetadata: (input.certificateMetadata as Prisma.InputJsonValue) || {
-            provider: "Ban Cơ yếu Chính phủ",
-            verifiedAt: now.toISOString(),
-            status: "VALID",
-          },
+          certificateMetadata: internalConfirmationMetadata(input.certificateMetadata),
           signedAt: now,
-          verificationStatus: SignatureVerificationStatus.VALID,
+          verificationStatus: INTERNAL_CONFIRMATION_STATUS,
         },
       });
 
@@ -936,25 +1135,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Signer cannot assign number!
-    OutgoingDocumentStateMachine.assertSignerNotNumberer(existing.authorizedSignerId, user.id);
-    if (existing.document.signerName === user.name) {
-      throw new ForbiddenError(
-        "Người ký văn bản không được tự cấp số hoặc đóng dấu số cơ quan (Signer != Numberer)."
-      );
-    }
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "school",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      signerId: existing.authorizedSignerId || undefined,
-      authorizedSignerId: existing.authorizedSignerId || undefined,
-    };
-
-    await assertAuthorized(user, "document.outgoing.assign_number", resource);
+    await runOutgoingStepGate("assign-number", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
 
     // A retry for an already-numbered document returns the original assignment. Do this
     // after authorization so callers cannot use an idempotent response to inspect a
@@ -970,7 +1153,15 @@ export class OutgoingDocumentService {
     }
 
     const now = new Date();
-    const documentYear = now.getFullYear();
+    const documentYear = currentNumberingYear();
+    // Ngày ban hành và ký hiệu kiểm trước khi chiếm bước, để lỗi nhập liệu không tiêu thụ số trong dãy.
+    const issuedDay = resolveIssuedDate(input.issuedDate, issuedDateBounds(existing.authorizedSignedAt as Date));
+    const customNotation = input.codeNotation?.trim();
+    // Ký hiệu chỉ dùng để ghép số; số ghi tường minh (`outgoingNumberStr`) thì không dùng đến nên không cần kiểm
+    if (customNotation && !input.outgoingNumberStr) assertValidNotation(customNotation);
+    const notation =
+      customNotation ||
+      (await resolveDefaultNotation({ category: existing.document.category, draftingUnitId: existing.draftingUnitId }));
 
     return prisma.$transaction(async (tx) => {
       // Claim the transition before allocating a number. The conditional update locks
@@ -1010,7 +1201,6 @@ export class OutgoingDocumentService {
         tx
       );
 
-      const notation = input.codeNotation || "QĐ-CĐKTCNQN";
       const outgoingNumberStr = input.outgoingNumberStr || `${allocatedNumber}/${notation}`;
 
       const updatedWorkflow = await tx.documentOutgoingWorkflow.update({
@@ -1029,7 +1219,9 @@ export class OutgoingDocumentService {
         data: {
           originalNumber: outgoingNumberStr,
           registrationNumber: allocatedNumber,
-          issuedDate: input.issuedDate ? new Date(input.issuedDate) : now,
+          // Số thuộc dãy của năm cấp số, nên bản ghi mang năm đó dù dự thảo tạo từ năm trước
+          documentYear,
+          issuedDate: issuedDay ? new Date(issuedDay) : now,
           status: mapOutgoingWorkflowStatusToDocumentStatus(OutgoingDocumentStatus.NUMBERED),
           securityLevel: input.securityLevel || existing.document.securityLevel,
           urgency: input.urgency || existing.document.urgency,
@@ -1069,6 +1261,44 @@ export class OutgoingDocumentService {
   }
 
   /**
+   * Xem trước hộp Cấp số: số sẽ cấp, ký hiệu mặc định theo loại và đơn vị soạn, khoảng ngày ban hành. Qua cùng cổng với
+   * lệnh cấp số nên chỉ người cấp số được xem; không ghi gì. Số có thể lệch nếu người khác cấp trước.
+   */
+  static async previewAssignNumber(
+    documentId: string,
+    actor: AuthenticatedUserContext | SessionPayload | AuthenticatedUser
+  ) {
+    const user = await resolveUserContext(actor);
+    const existing = await prisma.documentOutgoingWorkflow.findUnique({
+      where: { documentId },
+      include: { document: true },
+    });
+    if (!existing) throw new NotFoundError("Hồ sơ văn bản đi không tồn tại.");
+    if (!existing.authorizedSignedAt || existing.status !== OutgoingDocumentStatus.AUTHORIZED_SIGN) {
+      throw new InvalidTransitionError("Chỉ cấp số cho văn bản đã ký chức danh và chưa được cấp số.");
+    }
+    await runOutgoingStepGate("assign-number", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
+    );
+
+    const year = currentNumberingYear();
+    const [number, notation] = await Promise.all([
+      peekNextRegistrationNumber(DocumentType.VAN_BAN_DI, year),
+      resolveDefaultNotation({ category: existing.document.category, draftingUnitId: existing.draftingUnitId }),
+    ]);
+    const bounds = issuedDateBounds(existing.authorizedSignedAt);
+    return {
+      year,
+      number,
+      notation,
+      numberStr: `${number}/${notation}`,
+      issuedDate: bounds.max,
+      minIssuedDate: bounds.min,
+      maxIssuedDate: bounds.max,
+    };
+  }
+
+  /**
    * 8. ORGANIZATION SIGN (Văn thư đóng dấu số cơ quan)
    * Văn thư applies institutional digital certificate under NĐ 30/2020 & NĐ 68/2024.
    * Invariant: Document MUST be NUMBERED before organization sign.
@@ -1097,28 +1327,9 @@ export class OutgoingDocumentService {
       );
     }
 
-    // Separation of Duties check: Signer cannot organization-sign!
-    OutgoingDocumentStateMachine.assertSignerNotOrganizationSigner(
-      existing.authorizedSignerId,
-      user.id
+    await runOutgoingStepGate("organization-sign", user, existing, (action, resource) =>
+      assertAuthorized(user, action, resource)
     );
-    if (existing.document.signerName === user.name) {
-      throw new ForbiddenError(
-        "Người ký văn bản không được tự đóng dấu số cơ quan (Signer != Org Signer)."
-      );
-    }
-
-    const resource: AuthorizationResource = {
-      id: input.documentId,
-      type: "document",
-      scope: "school",
-      primaryOwnerId: existing.document.registeredById,
-      createdById: existing.document.registeredById,
-      signerId: existing.authorizedSignerId || undefined,
-      authorizedSignerId: existing.authorizedSignerId || undefined,
-    };
-
-    await assertAuthorized(user, "document.outgoing.organization_sign", resource);
 
     return prisma.$transaction(async (tx) => {
       const now = new Date();
@@ -1132,14 +1343,9 @@ export class OutgoingDocumentService {
           signerAssignmentId: (user as any).activeAssignmentId || null,
           signingCapacity: getOfficialSigningCapacity("VĂN PHÒNG"),
           signatureType: SignatureType.ORGANIZATION_DIGITAL,
-          certificateMetadata: (input.certificateMetadata as Prisma.InputJsonValue) || {
-            organization: INSTITUTION_CONFIG.officialName.toUpperCase(),
-            ca: "Ban Cơ yếu Chính phủ - Cục Chứng thực số và Bảo mật thông tin",
-            signedAt: now.toISOString(),
-            status: "VALID",
-          },
+          certificateMetadata: internalConfirmationMetadata(input.certificateMetadata),
           signedAt: now,
-          verificationStatus: SignatureVerificationStatus.VALID,
+          verificationStatus: INTERNAL_CONFIRMATION_STATUS,
         },
       });
 

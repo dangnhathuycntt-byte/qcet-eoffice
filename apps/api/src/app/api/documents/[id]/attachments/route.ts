@@ -12,7 +12,12 @@ import {
 import { assertRateLimit } from "@/server/security/rate-limit";
 import { canUpdateDocument } from "@/server/policies/document-policy";
 import { addUploadedFileAttachment, getDocumentById } from "@/server/documents/document-service";
-import { isDocumentImmutable } from "@/server/documents/state-machine";
+import {
+  isDocumentImmutable,
+  isOutgoingUnderReview,
+  OUTGOING_UNDER_REVIEW_CODE,
+  OUTGOING_UNDER_REVIEW_MESSAGE,
+} from "@/server/documents/state-machine";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { loadAuthorizationContext } from "@/server/authorization";
 
@@ -55,6 +60,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
         undefined,
         "IMMUTABLE_DOCUMENT"
       );
+    }
+    if (isOutgoingUnderReview(document)) {
+      throw new ValidationError(OUTGOING_UNDER_REVIEW_MESSAGE, undefined, OUTGOING_UNDER_REVIEW_CODE);
     }
 
     const attachment = await addUploadedFileAttachment({ documentId: id, fileId, actorId: authUser.id, requestId });

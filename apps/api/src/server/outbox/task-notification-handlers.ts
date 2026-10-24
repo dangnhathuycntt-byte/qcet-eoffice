@@ -168,7 +168,7 @@ export async function deliverTaskNotice(db: DbClient, notice: TaskNotice): Promi
   return recipients;
 }
 
-function guarded(handler: (event: OutboxEvent, db: DbClient) => Promise<unknown>): OutboxEventHandler {
+export function guarded(handler: (event: OutboxEvent, db: DbClient) => Promise<unknown>): OutboxEventHandler {
   return async (event: OutboxEvent, context?: OutboxHandlerContext) => {
     const now = context?.now ?? new Date();
     if (event.attempts === 0 && now.getTime() - event.createdAt.getTime() > STALE_EVENT_MAX_AGE_MS) {
@@ -182,7 +182,7 @@ function guarded(handler: (event: OutboxEvent, db: DbClient) => Promise<unknown>
 }
 
 /** Đã có đường gửi khác: chỉ đánh dấu xử lý xong. */
-const acknowledge: OutboxEventHandler = async () => ({ skipped: "delivered_elsewhere" });
+export const acknowledge: OutboxEventHandler = async () => ({ skipped: "delivered_elsewhere" });
 
 export const TASK_NOTIFICATION_HANDLERS: OutboxHandlerMap = {
   [OutboxEventType.TASK_REMINDER_NOTIFICATION]: guarded(async (event, db) => {

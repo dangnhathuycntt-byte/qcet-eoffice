@@ -2,6 +2,11 @@ import type { Prisma } from "@prisma/client";
 import { DOCUMENT_DONE_STATUSES, type DocumentBucket } from "@qcet/shared/lib/documents/document-sidebar-buckets";
 import { AWAITING_RECEIPT_STATUSES } from "@qcet/shared/domain/documents/delivery-rules";
 import { deliveredToUnitsWhere } from "@/server/policies/document-policy";
+import {
+  outgoingAwaitingViewerWhere,
+  outgoingHandledByViewerWhere,
+  type OutgoingQueueViewer,
+} from "./outgoing-queue";
 
 // Quy trình 6: văn bản đến coi là đã xử lý từ bước "Hoàn thành" trở đi.
 const INCOMING_WF_DONE = ["RESOLVED", "FILED", "ARCHIVED"] as const;
@@ -24,11 +29,14 @@ function awaitingReceiptWhere(unitIds: string[]): Prisma.DocumentWhereInput {
 /**
  * `deliveredUnitIds`: đơn vị của người xem khi sổ Văn bản đến gồm cả văn bản đi đã phát hành tới đơn vị đó
  * (`buildInboxTypeWhere`, ADR-015). Không truyền thì chỉ xét văn bản đến đã vào sổ như trước.
+ * `viewer`: với Văn bản đi, "Chờ xử lý" và "Đã xử lý" tính theo người xem (`outgoing-queue`). Không truyền thì tính theo
+ * trạng thái cho cả trường, dùng cho số liệu Báo cáo (không phải việc của một người).
  */
 export function buildDocumentBucketWhere(
   type: "VAN_BAN_DEN" | "VAN_BAN_DI",
   bucket: DocumentBucket,
-  deliveredUnitIds?: string[]
+  deliveredUnitIds?: string[],
+  viewer?: OutgoingQueueViewer
 ): Prisma.DocumentWhereInput | null {
   if (bucket === "recalled") {
     // Chỉ văn bản đi mới có thu hồi; văn bản đến không khớp nhóm này.
@@ -63,6 +71,8 @@ export function buildDocumentBucketWhere(
     }
     return null;
   }
+  if (viewer && bucket === "pending") return outgoingAwaitingViewerWhere(viewer);
+  if (viewer && bucket === "done") return outgoingHandledByViewerWhere(viewer);
   const noWorkflow: Prisma.DocumentWhereInput = { outgoingWorkflow: { is: null } };
   if (bucket === "pending") {
     return {

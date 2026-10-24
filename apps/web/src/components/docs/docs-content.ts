@@ -1124,7 +1124,7 @@ export const DOC_GROUPS: DocGroup[] = [
         slug: "ky-tren-van-ban",
         title: "Ký trên văn bản",
         description:
-          "Ký chức danh, ký nháy, đóng dấu cơ quan và xem chữ ký số của văn bản đi.",
+          "Xác nhận ký, ký nháy và đóng dấu cơ quan của văn bản đi; hệ thống chưa ký số bằng chứng thư.",
         icon: "PenLine",
         blocks: [
           {
@@ -1147,9 +1147,9 @@ export const DOC_GROUPS: DocGroup[] = [
           {
             type: "ol",
             items: [
-              "Bấm **Ký chức danh**, rồi bấm **Xác nhận** trong hộp thoại. Sau khi ký, văn bản vẫn ở bước này cho đến khi được cấp số.",
+              "Bấm **Xác nhận ký**, rồi bấm **Xác nhận** trong hộp thoại. Sau khi ký, văn bản vẫn ở bước này cho đến khi được cấp số.",
               "Văn thư bấm **Cấp số & ngày ban hành** để cấp số liên tục và xác nhận ngày ban hành.",
-              "Sau khi cấp số, bấm **Đóng dấu cơ quan** để ký số tổ chức (dấu cơ quan điện tử) vào văn bản.",
+              "Sau khi cấp số, bấm **Đóng dấu cơ quan** để xác nhận đóng dấu cơ quan vào văn bản.",
             ],
           },
           {
@@ -1175,11 +1175,12 @@ export const DOC_GROUPS: DocGroup[] = [
           },
           {
             type: "h2",
-            text: "Xem chữ ký số",
+            text: "Chữ ký số bằng chứng thư",
           },
           {
-            type: "p",
-            text: "Khi văn bản đã có chữ ký số, mục **Xem chữ ký số** hiện trong menu **Thao tác khác** của văn bản. Hộp thoại **Chứng thực & ký số điện tử** có ba tab: **Dấu & chữ ký điện tử**, **Chứng thư số QCVN 102** và **Kiểm tra toàn vẹn**. Hộp thoại này dùng để xem và kiểm tra chữ ký.",
+            type: "callout",
+            tone: "warning",
+            text: "**Xác nhận ký** và **Đóng dấu cơ quan** ghi lại ai xác nhận, lúc nào, nhưng hệ thống chưa ký số bằng chứng thư và không đổi nội dung tệp. Văn bản cần chữ ký số theo quy định vẫn phải ký bằng chứng thư riêng ngoài hệ thống.",
           },
         ],
       },

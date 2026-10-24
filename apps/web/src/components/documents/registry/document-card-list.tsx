@@ -154,7 +154,7 @@ function DocumentMobileRow({
 }) {
   const urgencyConfig = getUrgencyBadgeConfig(doc.urgency);
   const isUrgent = Boolean(doc.urgency) && doc.urgency !== "normal" && doc.urgency !== "THUONG";
-  const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
+  const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type, doc.needsRevision);
   const stepStatus = { new: "NOT_STARTED", progress: "IN_PROGRESS", review: "WAITING_APPROVAL", done: "COMPLETED" }[step.kind];
   const typeLabel = getDocTypeLabel(doc.type);
   const code = doc.documentNumber || "";

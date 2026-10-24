@@ -21,12 +21,17 @@ import {
 import { OrganizationalUnitService } from "@/server/services/organization-unit-service";
 import {
   isDocumentImmutable,
+  isOutgoingUnderReview,
+  patchTouchesLockedContent,
+  OUTGOING_UNDER_REVIEW_CODE,
+  OUTGOING_UNDER_REVIEW_MESSAGE,
   mapIncomingWorkflowStatusToDocumentStatus,
   mapOutgoingWorkflowStatusToDocumentStatus,
 } from "./state-machine";
 import { ForbiddenError, NotFoundError, ValidationError } from "@/server/api/errors";
 import { DOCUMENT_DONE_STATUSES, type DocumentBucket } from "@qcet/shared/lib/documents/document-sidebar-buckets";
 import { buildDocumentBucketWhere } from "./document-bucket-where";
+import { outgoingAwaitingViewerWhere, outgoingQueueViewerOf } from "./outgoing-queue";
 import {
   assertCanLinkTask,
   lockDocumentRows,
@@ -37,6 +42,7 @@ import {
 import { logAuditEvent } from "@qcet/db/audit";
 import type { UpdateDocumentInput } from "@qcet/contracts/documents";
 import type { DocumentTypeCode } from "@qcet/shared/domain/documents/document-type-param";
+import { isReturnedNote } from "@qcet/shared/domain/documents/outgoing-steps";
 
 export {
   buildDocumentReadWhere,
@@ -267,6 +273,10 @@ export function mapPrismaDocumentToItem(rawRecord: any): DocumentItem {
 
     incomingWorkflow: record.incomingWorkflow || null,
     outgoingWorkflow: record.outgoingWorkflow || null,
+    needsRevision:
+      record.type === "VAN_BAN_DI" &&
+      record.outgoingWorkflow?.status === "DRAFT" &&
+      isReturnedNote(record.outgoingWorkflow?.contentReviewNotes),
     outgoingRecipients: record.outgoingRecipients || [],
     signatures: record.signatures || [],
     linkedTaskId: record.linkedTaskId || null,
@@ -427,7 +437,12 @@ export async function listDocuments(
     queryConditions.push({ documentYear: Number(filter.documentYear) });
   }
   if (filter.bucket && (filter.type === "VAN_BAN_DEN" || filter.type === "VAN_BAN_DI")) {
-    const bucketWhere = buildDocumentBucketWhere(filter.type, filter.bucket, inboxUnitIds);
+    const bucketWhere = buildDocumentBucketWhere(
+      filter.type,
+      filter.bucket,
+      inboxUnitIds,
+      filter.type === "VAN_BAN_DI" && effectiveUser ? outgoingQueueViewerOf(effectiveUser as never) : undefined
+    );
     if (bucketWhere) queryConditions.push(bucketWhere);
   }
   if (filter.status) {
@@ -532,7 +547,7 @@ export async function updateDocument(
   const existing = await db.document.findUnique({
     where: { id },
     include: {
-      signatures: { select: { id: true }, take: 1 },
+      signatures: { select: { id: true, signatureType: true, verificationStatus: true } },
       outgoingWorkflow: { select: { status: true, authorizedSignedAt: true } },
       incomingWorkflow: { select: { id: true, status: true } },
     },
@@ -548,6 +563,9 @@ export async function updateDocument(
       undefined,
       "IMMUTABLE_DOCUMENT"
     );
+  }
+  if (isOutgoingUnderReview(existing) && patchTouchesLockedContent(payload)) {
+    throw new ValidationError(OUTGOING_UNDER_REVIEW_MESSAGE, undefined, OUTGOING_UNDER_REVIEW_CODE);
   }
 
   if (
@@ -679,6 +697,9 @@ export async function applyDocumentPatch(
             "IMMUTABLE_DOCUMENT"
           );
         }
+        if (isOutgoingUnderReview(fresh) && patchTouchesLockedContent(rest)) {
+          throw new ValidationError(OUTGOING_UNDER_REVIEW_MESSAGE, undefined, OUTGOING_UNDER_REVIEW_CODE);
+        }
         if (!canUpdateDocument(authUser, fresh)) {
           throw new ForbiddenError("Bạn không có quyền cập nhật văn bản này (Forbidden)");
         }
@@ -794,6 +815,20 @@ export async function addUploadedFileAttachment({
       metadata: { attachmentId: created.id, fileName: created.fileName },
     });
     return created;
+  });
+}
+
+/** Số văn bản đi đang chờ chính người xem làm bước của mình (chấm báo việc ở sidebar), trong phạm vi họ đọc được. */
+export function countOutgoingAwaitingViewer(authContext: AuthorizationContext): Promise<number> {
+  return defaultPrisma.document.count({
+    where: {
+      AND: [
+        { archivedAt: null },
+        { type: "VAN_BAN_DI" },
+        buildDocumentReadWhere(authContext, { delivered: false }),
+        outgoingAwaitingViewerWhere(outgoingQueueViewerOf(authContext as never), { attentionOnly: true }),
+      ],
+    },
   });
 }
 

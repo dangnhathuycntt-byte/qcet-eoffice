@@ -160,7 +160,7 @@ describe('H-1 outbox worker: thông báo nhiệm vụ', () => {
   });
 
   test('sự kiện không có handler giữ nguyên PENDING', async () => {
-    const id = await publish(OutboxEventType.DOCUMENT_PRESENTED_NOTIFICATION, {});
+    const id = await publish('TEST_EVENT_WITHOUT_HANDLER', {});
     await runOutboxCycle(prisma, { ids: [id] });
     const ev = await prisma.outboxEvent.findUniqueOrThrow({ where: { id } });
     assert.equal(ev.status, OutboxStatus.PENDING);

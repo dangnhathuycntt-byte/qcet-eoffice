@@ -86,6 +86,8 @@ describe('V-09 ký nháy văn bản đi', () => {
     const records = await prisma.signatureRecord.findMany({ where: { documentId: id }, orderBy: { signedAt: 'asc' } });
     assert.equal(records.length, 2);
     assert.ok(records.every((r) => r.signatureType === SignatureType.INITIAL));
+    // Xác nhận nội bộ, không phải chữ ký số có chứng thư (spec Văn bản G1)
+    assert.ok(records.every((r) => r.verificationStatus === 'UNVERIFIED'));
     assert.match(records[0].signingCapacity, /^Ký nháy/);
     assert.ok(await prisma.auditEvent.findFirst({ where: { entityId: id, action: 'OUTGOING_INITIAL_SIGNED', actorId: u.head } }));
     // Ký nháy không đổi trạng thái quy trình.

@@ -10,6 +10,7 @@ import {
   processOutboxBatch,
   recoverExpiredOutboxLeases,
   type DbClient,
+  type OutboxHandlerMap,
   type ProcessOutboxBatchResult,
 } from "@qcet/db/outbox";
 import { prisma } from "@qcet/db/prisma";
@@ -17,8 +18,9 @@ import { registerShutdownHook } from "@/server/lifecycle/shutdown";
 import { logger } from "@/server/observability/logger";
 import { scanTaskReminders } from "@/server/tasks/task-reminder-scanner";
 import { sendAssistantBriefings } from "@/server/assistant/assistant-briefing";
-import { TASK_NOTIFICATION_HANDLERS } from "./task-notification-handlers";
+import { TASK_NOTIFICATION_HANDLERS, acknowledge } from "./task-notification-handlers";
 import { DOCUMENT_NOTIFICATION_HANDLERS } from "./document-notification-handlers";
+import { OUTGOING_NOTIFICATION_HANDLERS } from "./outgoing-notification-handlers";
 import { DOSSIER_NOTIFICATION_HANDLERS } from "./dossier-notification-handlers";
 import { FILE_PURGE_HANDLERS } from "@/server/files/file-object-purge";
 import { scanDossierReminders } from "@/server/dossiers/dossier-reminder-scanner";
@@ -26,9 +28,37 @@ import { runTaskRecurrences } from "@/server/tasks/task-recurrence-service";
 import { AGENT_JOB_HANDLERS, agentJobTimeoutMs } from "./agent-jobs";
 import { MEETING_RECORDING_JOB_HANDLERS } from "@/server/meetings/recording-job";
 
+/**
+ * Sự kiện văn bản và hồ sơ được phát ra nhưng cố ý không báo ai: không ai cần biết thêm, hoặc chưa quyết định cách báo.
+ * Sự kiện không có handler thì `processOutboxBatch` bỏ qua và nằm PENDING mãi, nên mỗi mục ở đây được đăng ký một handler
+ * chỉ xác nhận để sự kiện hoàn tất. Mọi `DOCUMENT_*`/`DOSSIER_*` được phát ra phải có handler thật hoặc có mặt ở đây kèm
+ * lý do (test `outbox-event-handlers`).
+ */
+export const SILENT_OUTBOX_EVENTS: Readonly<Record<string, string>> = {
+  DOCUMENT_DRAFT_CREATED: "Người soạn tự tạo dự thảo; người duyệt được báo khi trình.",
+  DOCUMENT_NUMBERED: "Văn thư cấp số cũng là người đóng dấu bước kế; hàng đợi của họ đã đủ.",
+  DOCUMENT_ORGANIZATION_SIGNED: "Văn thư đóng dấu cũng là người phát hành bước kế; hàng đợi của họ đã đủ.",
+  DOCUMENT_REVISION_CREATED: "Bản sửa đổi do người soạn tự tạo, quay lại luồng duyệt từ đầu.",
+  DOCUMENT_RESOLVED_NOTIFICATION: "Luồng văn bản đến cũ (ADR-015, D9): chưa quyết định giữ hay bỏ.",
+  DOCUMENT_FILED_NOTIFICATION: "Luồng văn bản đến cũ (ADR-015, D9): chưa quyết định giữ hay bỏ.",
+  DOCUMENT_PRESENTED_NOTIFICATION: "Luồng văn bản đến cũ (ADR-015, D9): chưa quyết định giữ hay bỏ.",
+  DOCUMENT_DIRECTIVE_NOTIFICATION: "Luồng văn bản đến cũ (ADR-015, D9): chưa quyết định giữ hay bỏ.",
+  DOCUMENT_ASSIGNED_NOTIFICATION: "Luồng văn bản đến cũ (ADR-015, D9): chưa quyết định giữ hay bỏ.",
+  DOSSIER_CREATED_NOTIFICATION: "Đợt B5 (Hồ sơ) làm cùng bước tạo và nộp lưu trữ (spec H3).",
+  DOSSIER_CLOSED_NOTIFICATION: "Đợt B5 (Hồ sơ) làm cùng bước tạo và nộp lưu trữ (spec H3).",
+  DOSSIER_SUBMITTED_ARCHIVE_NOTIFICATION: "Đợt B5 (Hồ sơ) làm cùng bước tạo và nộp lưu trữ (spec H3).",
+  DOSSIER_ACCEPTED_ARCHIVE_NOTIFICATION: "Đợt B5 (Hồ sơ) làm cùng bước tạo và nộp lưu trữ (spec H3).",
+};
+
+const SILENT_OUTBOX_HANDLERS: OutboxHandlerMap = Object.fromEntries(
+  Object.keys(SILENT_OUTBOX_EVENTS).map((eventType) => [eventType, acknowledge])
+);
+
 export const OUTBOX_HANDLERS = {
+  ...SILENT_OUTBOX_HANDLERS,
   ...TASK_NOTIFICATION_HANDLERS,
   ...DOCUMENT_NOTIFICATION_HANDLERS,
+  ...OUTGOING_NOTIFICATION_HANDLERS,
   ...DOSSIER_NOTIFICATION_HANDLERS,
   ...FILE_PURGE_HANDLERS,
   ...AGENT_JOB_HANDLERS,

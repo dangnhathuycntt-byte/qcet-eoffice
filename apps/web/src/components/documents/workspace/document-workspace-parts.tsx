@@ -280,7 +280,7 @@ export function DocumentInfoSections({
           <OutgoingActionPanel
             documentId={vm.id}
             status={outgoingStatus as never}
-            currentUserId=""
+            step={item.outgoingStep}
             className="border-0 bg-transparent p-0 [&>h3]:sr-only"
             onActionSuccess={onWorkflowUpdate}
           />
@@ -309,7 +309,7 @@ export function DocumentInfoSections({
         <OutgoingActionPanel
           documentId={vm.id}
           status={outgoingStatus as never}
-          currentUserId=""
+          step={item.outgoingStep}
           className="border-0 bg-transparent p-0 [&>h3]:sr-only"
           onActionSuccess={onWorkflowUpdate}
         />

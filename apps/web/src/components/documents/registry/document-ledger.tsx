@@ -178,8 +178,8 @@ const EMPTY_SCOPE_COPY: Record<string, Record<string, { title: string; descripti
     done: { title: "Chưa có văn bản đến đã xử lý", description: "Văn bản đến đã tiếp nhận, đã hoàn thành hoặc đã lập hồ sơ sẽ hiện ở đây." },
   },
   outbox: {
-    pending: { title: "Không có văn bản đi chờ xử lý", description: "Dự thảo đang soạn, chờ duyệt hoặc chờ ký sẽ hiện ở đây." },
-    done: { title: "Chưa có văn bản đi đã xử lý", description: "Văn bản đã ký, đã cấp số và chờ phát hành sẽ hiện ở đây." },
+    pending: { title: "Không có văn bản đi nào chờ bạn", description: "Dự thảo bạn đang soạn và văn bản đến lượt bạn duyệt, ký hoặc xử lý sẽ hiện ở đây." },
+    done: { title: "Chưa có văn bản đi đã xử lý", description: "Văn bản bạn đã làm xong bước của mình và đang chờ người khác sẽ hiện ở đây." },
     issued: { title: "Chưa có văn bản đi đã phát hành", description: "Văn bản đã phát hành sẽ hiện ở đây." },
   },
 };
@@ -674,7 +674,7 @@ interface LedgerRowProps {
 }
 
 function LedgerRow({ doc, documents, selected, groupPosition, isOpen, numberHeader, visibleColumns, filterYear, today, onOpen, onNavigate, onFocusDetail, onToggleSelect, onRowMenu, menuTarget }: LedgerRowProps) {
-  const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type);
+  const step = getLedgerStepLabel(doc.status, doc.workflowStatus, doc.type, doc.needsRevision);
   const no = numberLabel(doc);
   const urgent = urgencyText(doc);
   const unit = doc.leadDepartment && doc.leadDepartment !== "Chưa phân công" ? doc.leadDepartment : "";
